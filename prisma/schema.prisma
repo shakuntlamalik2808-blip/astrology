@@ -1,0 +1,146 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+enum Role {
+  ADMIN
+}
+
+enum AppointmentType {
+  KUNDLI
+  DAILY_COUNSELING
+}
+
+enum AppointmentStatus {
+  SCHEDULED
+  COMPLETED
+  CANCELLED
+  NO_SHOW
+}
+
+enum PaymentStatus {
+  PENDING
+  SUCCEEDED
+  FAILED
+  REFUNDED
+}
+
+enum PaymentKind {
+  SINGLE_CONSULTATION
+  DAILY_RETAINER
+  COURSE
+  VASTU_AUDIT
+}
+
+model User {
+  id            String    @id @default(cuid())
+  name          String?
+  email         String    @unique
+  emailVerified DateTime?
+  image         String?
+  passwordHash  String?
+  role          Role      @default(ADMIN)
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+}
+
+model Client {
+  id               String        @id @default(cuid())
+  fullName         String
+  email            String        @unique
+  phone            String?
+  timezone         String        @default("Asia/Kolkata")
+  birthDate        DateTime?
+  birthTime        String?
+  birthPlace       String?
+  latitude         Float?
+  longitude        Float?
+  vastuFloorPlan   String?
+  notesSummary     String?
+  createdAt        DateTime      @default(now())
+  updatedAt        DateTime      @updatedAt
+  appointments     Appointment[]
+  sessionNotes     SessionNote[]
+  payments         Payment[]
+  enrollments      Enrollment[]
+}
+
+model Appointment {
+  id        String            @id @default(cuid())
+  clientId  String
+  client    Client            @relation(fields: [clientId], references: [id], onDelete: Cascade)
+  type      AppointmentType
+  status    AppointmentStatus @default(SCHEDULED)
+  startsAt  DateTime
+  durationMin Int
+  timezone  String            @default("Asia/Kolkata")
+  title     String?
+  createdAt DateTime          @default(now())
+  updatedAt DateTime          @updatedAt
+  payment   Payment?
+  sessionNote SessionNote?
+
+  @@index([startsAt])
+  @@index([clientId])
+}
+
+model SessionNote {
+  id            String       @id @default(cuid())
+  clientId      String
+  client        Client       @relation(fields: [clientId], references: [id], onDelete: Cascade)
+  appointmentId String?      @unique
+  appointment   Appointment? @relation(fields: [appointmentId], references: [id], onDelete: SetNull)
+  body          String
+  authoredBy    String?
+  createdAt     DateTime     @default(now())
+  updatedAt     DateTime     @updatedAt
+
+  @@index([clientId])
+}
+
+model Payment {
+  id            String        @id @default(cuid())
+  clientId      String
+  client        Client        @relation(fields: [clientId], references: [id], onDelete: Cascade)
+  appointmentId String?       @unique
+  appointment   Appointment?  @relation(fields: [appointmentId], references: [id], onDelete: SetNull)
+  amountInr     Int
+  currency      String        @default("INR")
+  kind          PaymentKind
+  status        PaymentStatus @default(PENDING)
+  provider      String?
+  providerRef   String?
+  createdAt     DateTime      @default(now())
+  updatedAt     DateTime      @updatedAt
+
+  @@index([clientId])
+  @@index([status])
+}
+
+model Course {
+  id          String       @id @default(cuid())
+  title       String
+  slug        String       @unique
+  description String
+  startsAt    DateTime
+  durationWeeks Int
+  priceInr    Int
+  seats       Int          @default(20)
+  enrollments Enrollment[]
+}
+
+model Enrollment {
+  id        String   @id @default(cuid())
+  clientId  String
+  client    Client   @relation(fields: [clientId], references: [id], onDelete: Cascade)
+  courseId  String
+  course    Course   @relation(fields: [courseId], references: [id], onDelete: Cascade)
+  createdAt DateTime @default(now())
+
+  @@unique([clientId, courseId])
+}

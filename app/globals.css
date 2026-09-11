@@ -1,0 +1,64 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  :root {
+    --background: 40 33% 97%;
+    --foreground: 213 61% 11%;
+    --card: 0 0% 100%;
+    --card-foreground: 213 61% 11%;
+    --popover: 0 0% 100%;
+    --popover-foreground: 213 61% 11%;
+    --primary: 213 61% 11%;
+    --primary-foreground: 40 33% 97%;
+    --secondary: 40 20% 93%;
+    --secondary-foreground: 213 61% 11%;
+    --muted: 40 18% 92%;
+    --muted-foreground: 215 16% 40%;
+    --accent: 43 65% 52%;
+    --accent-foreground: 213 61% 11%;
+    --destructive: 0 72% 51%;
+    --destructive-foreground: 0 0% 100%;
+    --border: 36 18% 86%;
+    --input: 36 18% 86%;
+    --ring: 43 65% 52%;
+    --radius: 0.75rem;
+  }
+
+  .dark {
+    --background: 213 61% 7%;
+    --foreground: 40 33% 96%;
+    --card: 213 50% 11%;
+    --card-foreground: 40 33% 96%;
+    --popover: 213 50% 11%;
+    --popover-foreground: 40 33% 96%;
+    --primary: 43 65% 52%;
+    --primary-foreground: 213 61% 11%;
+    --secondary: 213 40% 16%;
+    --secondary-foreground: 40 33% 96%;
+    --muted: 213 32% 16%;
+    --muted-foreground: 215 16% 70%;
+    --accent: 43 65% 52%;
+    --accent-foreground: 213 61% 11%;
+    --destructive: 0 62% 45%;
+    --destructive-foreground: 0 0% 100%;
+    --border: 213 28% 20%;
+    --input: 213 28% 20%;
+    --ring: 43 65% 52%;
+  }
+
+  * {
+    @apply border-border;
+  }
+
+  body {
+    @apply bg-background text-foreground antialiased;
+  }
+}
+
+@layer utilities {
+  .gold-rule {
+    @apply h-px w-16 bg-gold;
+  }
+}
