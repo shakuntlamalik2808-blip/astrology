@@ -35,7 +35,7 @@ export const consultationSchema = z.object({
   fullName: z.string().transform(clean).pipe(z.string().min(2, "Please enter your full name.").max(100)),
   countryCode: z.string().regex(/^\+\d{1,4}$/),
   phone: z.string().trim().regex(/^\d{6,14}$/, "Please enter a valid WhatsApp number."),
-  email: z.string().trim().email("Please enter a valid email address.").max(255),
+  email: z.string().trim().email("Please enter a valid email address.").max(255).optional().default(""),
   dateOfBirth: z.string().min(1, "Please enter your date of birth."),
   timeOfBirth: z.string().optional().default(""),
   placeOfBirth: z.string().transform(clean).pipe(z.string().min(2, "Please enter your place of birth.").max(120)),

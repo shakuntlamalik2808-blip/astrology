@@ -30,7 +30,8 @@ service cloud.firestore {
            ])
         && str(request.resource.data.fullName, 2, 100)
         && request.resource.data.whatsappNumber.matches('^\\+[0-9]{7,18}$')
-        && request.resource.data.email.matches('^[^@\\s]+@[^@\\s]+\\.[^@\\s]+$')
+        && request.resource.data.email is string
+        && (request.resource.data.email == '' || request.resource.data.email.matches('^[^@\\s]+@[^@\\s]+\\.[^@\\s]+$'))
         && str(request.resource.data.placeOfBirth, 2, 120)
         && str(request.resource.data.currentCity, 2, 120)
         && str(request.resource.data.consultationType, 2, 100)

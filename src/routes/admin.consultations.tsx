@@ -287,7 +287,6 @@ function ConsultationForm({ mode, initial, row, onClose }: { mode: "create" | "e
               <input type="tel" inputMode="numeric" value={form.phone} onChange={(event) => set("phone")(event.target.value)} className={inputClass} />
             </div>
           </FormField>
-          <FormField label="Email" error={errors.email}><input type="email" value={form.email} onChange={(event) => set("email")(event.target.value)} className={inputClass} /></FormField>
           <FormField label="Date of birth" error={errors.dateOfBirth}><input type="date" value={form.dateOfBirth} onChange={(event) => set("dateOfBirth")(event.target.value)} className={inputClass} /></FormField>
           <FormField label="Time of birth"><input type="time" value={form.timeOfBirth} onChange={(event) => set("timeOfBirth")(event.target.value)} className={inputClass} /></FormField>
           <FormField label="Place of birth" error={errors.placeOfBirth}><input value={form.placeOfBirth} onChange={(event) => set("placeOfBirth")(event.target.value)} className={inputClass} /></FormField>

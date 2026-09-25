@@ -184,9 +184,6 @@ function BookPage() {
                         <input id="f-phone" type="tel" inputMode="numeric" autoComplete="tel-national" placeholder="98765 43210" value={values.phone} onChange={(e) => set("phone")(e.target.value)} className={inputCls} />
                       </div>
                     </Field>
-                    <Field id="email" label="Email" error={errors.email}>
-                      <input id="f-email" type="email" autoComplete="email" value={values.email} onChange={(e) => set("email")(e.target.value)} className={inputCls} />
-                    </Field>
                     <Field id="dateOfBirth" label="Date of birth" error={errors.dateOfBirth}>
                       <input id="f-dateOfBirth" type="date" max={today()} value={values.dateOfBirth} onChange={(e) => set("dateOfBirth")(e.target.value)} className={inputCls} />
                     </Field>
