@@ -33,10 +33,7 @@ service cloud.firestore {
         && request.resource.data.email.matches('^[^@\\s]+@[^@\\s]+\\.[^@\\s]+$')
         && str(request.resource.data.placeOfBirth, 2, 120)
         && str(request.resource.data.currentCity, 2, 120)
-        && request.resource.data.consultationType in [
-             'Kundli Consultation','Vastu Consultation',
-             'Match Making','General Consultation'
-           ]
+        && str(request.resource.data.consultationType, 2, 100)
         && str(request.resource.data.preferredDate, 10, 10)
         && str(request.resource.data.preferredTime, 4, 8)
         && str(request.resource.data.additionalMessage, 0, 1500)
@@ -51,6 +48,6 @@ service cloud.firestore {
 
     // settings/* is seeded automatically on first login — admins need write
     // access so the client can create the document if it doesn't exist yet.
-    match /settings/{id}      { allow read, write: if isAdmin(); }
+    match /settings/{id}      { allow read: if isAdmin() || id == 'website'; allow write: if isAdmin(); }
   }
 }

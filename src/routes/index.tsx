@@ -10,6 +10,7 @@ import { Academy } from "@/components/site/Academy";
 import { Trust } from "@/components/site/Trust";
 import { BookingCTA } from "@/components/site/BookingCTA";
 import { Footer } from "@/components/site/Footer";
+import { WebsiteSettingsProvider } from "@/lib/website-settings";
 
 const title = "Shakuntla Malik — Jyotish, Counseling & Astrology Academy";
 const description =
@@ -31,7 +32,7 @@ export const Route = createFileRoute("/")({
 
 function Index() {
   return (
-    <main className="relative">
+    <WebsiteSettingsProvider><main className="relative">
       <Navbar />
       <Hero />
       <Philosophy />
@@ -43,6 +44,6 @@ function Index() {
       <div className="defer-render"><Trust /></div>
       <div className="defer-render"><BookingCTA /></div>
       <div className="defer-render"><Footer /></div>
-    </main>
+    </main></WebsiteSettingsProvider>
   );
 }

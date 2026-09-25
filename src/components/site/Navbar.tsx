@@ -3,6 +3,7 @@ import { AnimatePresence, motion, useScroll, useMotionValueEvent } from "motion/
 import { Menu, X } from "lucide-react";
 import { MagneticButton } from "./MagneticButton";
 import { cn } from "@/lib/utils";
+import { useWebsiteSettings } from "@/lib/website-settings";
 
 const links = [
   { label: "Practice", href: "/#practice" },
@@ -14,6 +15,7 @@ const links = [
 ];
 
 export function Navbar() {
+  const settings = useWebsiteSettings();
   const [scrolled, setScrolled] = useState(false);
   const [open, setOpen] = useState(false);
   const { scrollY } = useScroll();
@@ -48,7 +50,7 @@ export function Navbar() {
                 scrolled ? "text-lg sm:text-xl" : "text-xl sm:text-2xl",
               )}
             >
-              <span className="block truncate">Shakuntla Malik</span>
+              <span className="flex items-center gap-2"><img src={settings.logoUrl} alt="" className="size-8 rounded-full object-cover" /><span className="block truncate">{settings.brandName}</span></span>
             </span>
             <span className="eyebrow hidden text-gold/80 sm:inline">Jyotish</span>
           </a>
@@ -96,7 +98,7 @@ export function Navbar() {
             className="surface-night fixed inset-0 z-60 flex flex-col px-6 py-6 lg:hidden"
           >
             <div className="grid grid-cols-[minmax(0,1fr)_auto] items-center gap-4">
-              <span className="display min-w-0 truncate text-xl text-ivory sm:text-2xl">Shakuntla Malik</span>
+              <span className="display min-w-0 truncate text-xl text-ivory sm:text-2xl">{settings.brandName}</span>
               <button
                 type="button"
                 aria-label="Close menu"

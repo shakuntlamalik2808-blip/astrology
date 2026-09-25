@@ -40,7 +40,7 @@ export const consultationSchema = z.object({
   timeOfBirth: z.string().optional().default(""),
   placeOfBirth: z.string().transform(clean).pipe(z.string().min(2, "Please enter your place of birth.").max(120)),
   currentCity: z.string().transform(clean).pipe(z.string().min(2, "Please enter your current city.").max(120)),
-  consultationType: z.enum(CONSULTATION_TYPES, { message: "Please choose a consultation type." }),
+  consultationType: z.string().min(2, "Please choose a consultation type.").max(100),
   preferredDate: z.string().min(1, "Please choose a preferred date."),
   preferredTime: z.string().min(1, "Please choose a preferred time."),
   additionalMessage: z.string().transform(clean).pipe(z.string().max(1500, "Please keep your message under 1500 characters.")),

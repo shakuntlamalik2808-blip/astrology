@@ -3,6 +3,7 @@ import { motion, AnimatePresence } from "motion/react";
 import { ArrowUpRight } from "lucide-react";
 import { Reveal } from "./Reveal";
 import { cn } from "@/lib/utils";
+import { useWebsiteSettings } from "@/lib/website-settings";
 
 const services = [
   {
@@ -91,8 +92,16 @@ function ServiceTexture({ type }: { type: string }) {
 }
 
 export function Services() {
+  const settings = useWebsiteSettings();
   const [active, setActive] = useState(0);
-  const current = services[active] ?? services[0];
+  const liveServices = settings.services.map((service, index) => ({
+    ...(services[index % services.length] ?? services[0]!),
+    id: service.id,
+    title: service.name,
+    price: service.price,
+    body: service.description,
+  }));
+  const current = liveServices[active] ?? liveServices[0];
   if (!current) return null;
 
   return (
@@ -108,7 +117,7 @@ export function Services() {
         <div className="mt-16 grid gap-12 lg:grid-cols-12">
           <div className="order-2 lg:order-1 lg:col-span-7">
             <ul className="border-t border-border">
-              {services.map((s, i) => (
+              {liveServices.map((s, i) => (
                 <Reveal as="li" key={s.id} delay={i * 0.08}>
                   <div
                     onMouseEnter={() => setActive(i)}
@@ -141,6 +150,15 @@ export function Services() {
                 </Reveal>
               ))}
             </ul>
+            <div className="mt-12 grid gap-4 sm:grid-cols-2">
+              {settings.packages.map((pkg) => (
+                <article key={pkg.id} className="rounded-sm border border-border bg-card p-5">
+                  <h3 className="display text-xl">{pkg.name}</h3>
+                  <p className="mt-2 text-lg text-gold">{pkg.price}</p>
+                  <p className="mt-3 text-sm leading-relaxed text-muted-foreground">{pkg.description}</p>
+                </article>
+              ))}
+            </div>
           </div>
 
           <div className="order-1 lg:order-2 lg:col-span-5">
@@ -158,6 +176,7 @@ export function Services() {
                   )}
                 >
                     <div className="pointer-events-none absolute inset-0 opacity-90">
+                      <img src={settings.serviceImageUrl} alt="" className="h-full w-full object-cover opacity-30" />
                       <ServiceTexture type={current.id} />
                     </div>
                     <div className="absolute inset-0 bg-gradient-to-t from-ink via-ink/48 to-transparent" />

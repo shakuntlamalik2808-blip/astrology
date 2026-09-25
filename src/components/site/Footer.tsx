@@ -1,3 +1,6 @@
+
+import { useWebsiteSettings } from "@/lib/website-settings";
+
 const nav = [
   { label: "Practice", href: "/#practice" },
   { label: "Consultations", href: "/#services" },
@@ -12,25 +15,24 @@ const nav = [
 const social = ["Instagram", "Facebook", "YouTube"];
 
 export function Footer() {
+  const settings = useWebsiteSettings();
   return (
     <footer id="footer" className="bg-ink text-ivory">
        <div className="mx-auto max-w-[88rem] px-6 py-16 lg:px-12 lg:py-20">
         <div className="grid gap-14 lg:grid-cols-12">
           <div className="lg:col-span-5">
-            <p className="display text-4xl">Shakuntla Malik</p>
+            <p className="display text-4xl">{settings.brandName}</p>
             <p className="eyebrow mt-3 text-gold/80">Jyotish</p>
             <address className="mt-8 text-sm leading-relaxed text-ivory/60 not-italic">
-              Sector 21, Faridabad
-              <br />
-              Faridabad, Haryana, India
+              {settings.address}
             </address>
             <a
-              href="mailto:akash.malik@successive.tech"
+              href={`mailto:${settings.companyEmail}`}
               className="mt-6 inline-block break-all text-sm text-ivory/80 underline decoration-gold/40 underline-offset-8 transition-colors hover:text-gold"
             >
-              akash.malik@successive.tech
+              {settings.companyEmail}
             </a>
-            <p className="mt-3 text-xs text-ivory/35">Placeholder contact — replace with the live address.</p>
+            <a href={`https://wa.me/${settings.whatsapp.replace(/\D/g, "")}`} className="mt-3 block text-sm text-ivory/70">WhatsApp: {settings.whatsapp}</a>
           </div>
 
           <nav className="lg:col-span-4" aria-label="Footer">
@@ -54,8 +56,8 @@ export function Footer() {
             <ul className="mt-5 space-y-3">
               {social.map((s) => (
                 <li key={s}>
-                  <a href="/#footer" className="text-sm text-ivory/65 transition-colors hover:text-gold">
-                    {s} <span className="text-ivory/30">(link pending)</span>
+                  <a href={s === "Instagram" ? settings.instagram : s === "Facebook" ? settings.facebook : settings.youtube} className="text-sm text-ivory/65 transition-colors hover:text-gold">
+                    {s}
                   </a>
                 </li>
               ))}
@@ -67,7 +69,7 @@ export function Footer() {
         </div>
 
         <div className="mt-16 flex flex-col gap-3 border-t border-ivory/10 pt-8 text-xs text-ivory/40 sm:flex-row sm:items-center sm:justify-between">
-          <p>© {new Date().getFullYear()} Shakuntla Malik. All rights reserved.</p>
+          <p>© {new Date().getFullYear()} {settings.brandName}. All rights reserved.</p>
           <p>Astrology as counseling — insight, timing and practical guidance.</p>
         </div>
       </div>

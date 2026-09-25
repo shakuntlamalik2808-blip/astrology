@@ -5,7 +5,6 @@ import { Navbar } from "@/components/site/Navbar";
 import { Footer } from "@/components/site/Footer";
 import { Starfield } from "@/components/site/Starfield";
 import {
-  CONSULTATION_TYPES,
   COUNTRY_CODES,
   consultationSchema,
   formatDate,
@@ -14,6 +13,7 @@ import {
   type ConsultationInput,
 } from "@/lib/consultations";
 import { isFirebaseConfigured } from "@/lib/firebase-config";
+import { useWebsiteSettings, WebsiteSettingsProvider } from "@/lib/website-settings";
 
 const title = "Book a Consultation — Shakuntla Malik";
 const description =
@@ -30,7 +30,7 @@ export const Route = createFileRoute("/book-consultation")({
       { name: "twitter:card", content: "summary_large_image" },
     ],
   }),
-  component: BookPage,
+  component: BookPageWithSettings,
 });
 
 const empty: ConsultationInput = {
@@ -52,7 +52,12 @@ type Errors = Partial<Record<keyof ConsultationInput, string>>;
 
 const today = () => new Date().toISOString().slice(0, 10);
 
+function BookPageWithSettings() {
+  return <WebsiteSettingsProvider><BookPage /></WebsiteSettingsProvider>;
+}
+
 function BookPage() {
+  const settings = useWebsiteSettings();
   const reduced = useReducedMotion();
   const [values, setValues] = useState<ConsultationInput>(empty);
   const [errors, setErrors] = useState<Errors>({});
@@ -92,7 +97,16 @@ function BookPage() {
       window.scrollTo({ top: 0, behavior: reduced ? "auto" : "smooth" });
     } catch (err) {
       console.error(err);
-      setSubmitError("We couldn't submit your request right now. Please try again.");
+      const code = (err as { code?: string })?.code;
+      if (!isFirebaseConfigured()) {
+        setSubmitError("Booking is unavailable because Firebase is not configured for this site.");
+      } else if (code === "permission-denied" || (err instanceof Error && err.message.includes("Missing or insufficient permissions"))) {
+        setSubmitError("Your request could not be saved because Firestore denied the write. Deploy the current firestore.rules file to your Firebase project, then try again.");
+      } else if (code === "unavailable" || code === "deadline-exceeded") {
+        setSubmitError("We couldn't reach Firestore. Check your connection and try submitting again.");
+      } else {
+        setSubmitError("We couldn't save your request. Please try again in a moment.");
+      }
     } finally {
       setSubmitting(false);
     }
@@ -143,7 +157,7 @@ function BookPage() {
             ) : (
               <motion.div key="form" {...fade}>
                 <p className="eyebrow text-gold">Book a Consultation</p>
-                <h1 className="display mt-5 text-[2.35rem] leading-tight sm:mt-6 sm:text-5xl md:text-6xl">Let's begin your journey toward clarity.</h1>
+                <h1 className="display mt-5 text-[2.35rem] leading-tight sm:mt-6 sm:text-5xl md:text-6xl">{settings.bookingContent}</h1>
                 <p className="mt-5 max-w-xl text-base leading-relaxed text-ivory/70 sm:mt-6 sm:text-lg">
                   Share a few details with us and we'll get back to you regarding your consultation.
                 </p>
@@ -191,7 +205,7 @@ function BookPage() {
                     <Field id="consultationType" label="Consultation type" error={errors.consultationType} full>
                       <select id="f-consultationType" value={values.consultationType} onChange={(e) => set("consultationType")(e.target.value)} className={inputCls}>
                         <option value="" className="bg-ink">Choose a consultation</option>
-                        {CONSULTATION_TYPES.map((t) => (
+                        {[...new Set([...settings.services.map((service) => service.name), "General Consultation"])].map((t) => (
                           <option key={t} value={t} className="bg-ink">{t}</option>
                         ))}
                       </select>

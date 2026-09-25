@@ -3,10 +3,12 @@ import { useRef } from "react";
 import { MagneticButton } from "./MagneticButton";
 import { Starfield } from "./Starfield";
 import heroCosmos from "@/assets/hero-cosmos.webp";
+import { useWebsiteSettings } from "@/lib/website-settings";
 
 const headline = ["Clarity for the", "moments that matter."];
 
 export function Hero() {
+  const settings = useWebsiteSettings();
   const ref = useRef<HTMLElement>(null);
   const reduced = useReducedMotion();
   const { scrollYProgress } = useScroll({ target: ref, offset: ["start start", "end start"] });
@@ -21,7 +23,7 @@ export function Hero() {
       className="surface-night grain relative flex min-h-[92svh] items-start overflow-hidden pt-20 sm:items-center sm:pt-24"
     >
       <motion.img
-        src={heroCosmos}
+        src={settings.heroImageUrl || heroCosmos}
         alt=""
         width={1600}
         height={1200}
@@ -49,9 +51,9 @@ export function Hero() {
           Jyotish • Counseling • Guidance
         </motion.p>
 
-        <p className="display mt-5 text-[clamp(1.4rem,3vw,2.5rem)] italic text-ivory/92 sm:mt-7">Shakuntla Malik</p>
+        <p className="display mt-5 text-[clamp(1.4rem,3vw,2.5rem)] italic text-ivory/92 sm:mt-7">{settings.brandName}</p>
          <h1 className="display mx-auto mt-5 max-w-5xl text-[clamp(2.35rem,7.4vw,6.6rem)] text-ivory sm:mt-7">
-          {headline.map((line, i) => (
+          {settings.heroTitle.split(/\s+(?=[^\s]*$)/).map((line, i) => (
             <span key={line} className="block overflow-hidden">
               <motion.span
                 className="block"
@@ -77,6 +79,8 @@ export function Hero() {
             with care, so the decision in front of you gets clearer.
           </motion.p>
 
+          <p className="max-w-2xl text-sm leading-relaxed text-ivory/72 sm:text-base lg:text-lg">{settings.heroSubtitle}</p>
+          <p className="max-w-2xl text-xs leading-relaxed text-ivory/55">{settings.homepageDescription}</p>
           <motion.div
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}

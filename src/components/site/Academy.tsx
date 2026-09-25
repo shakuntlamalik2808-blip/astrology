@@ -1,6 +1,7 @@
 import { Reveal } from "./Reveal";
 import { MagneticButton } from "./MagneticButton";
 import academyImg from "@/assets/academy.webp";
+import { useWebsiteSettings } from "@/lib/website-settings";
 
 const modules = [
   { title: "Foundations of Jyotish", body: "Signs, houses, planets and the logic that binds them." },
@@ -10,6 +11,7 @@ const modules = [
 ];
 
 export function Academy() {
+  const settings = useWebsiteSettings();
   return (
     <section id="academy" className="surface-night section-rule editorial-section grain relative overflow-hidden">
       <div className="relative mx-auto grid max-w-[88rem] gap-16 px-6 lg:grid-cols-12 lg:px-12">
@@ -23,6 +25,7 @@ export function Academy() {
               A teaching programme for students who want the tradition taught properly — its
               reasoning, its limits and its responsible use.
             </p>
+            <p className="mt-4 max-w-md text-sm leading-relaxed text-ivory/65">{settings.academyContent}</p>
             <div className="mt-10">
               <MagneticButton href="/book-consultation" variant="gold">
                 Explore the Academy

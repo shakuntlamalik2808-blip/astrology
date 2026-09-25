@@ -3,8 +3,10 @@ import { useRef } from "react";
 import { Reveal, RevealWords } from "./Reveal";
 import { MagneticButton } from "./MagneticButton";
 import portrait from "@/assets/about-portrait.webp";
+import { useWebsiteSettings } from "@/lib/website-settings";
 
 export function About() {
+  const settings = useWebsiteSettings();
   const ref = useRef<HTMLDivElement>(null);
   const reduced = useReducedMotion();
   const { scrollYProgress } = useScroll({ target: ref, offset: ["start end", "end start"] });
@@ -16,7 +18,7 @@ export function About() {
         <div ref={ref} className="relative lg:col-span-5">
           <div className="relative overflow-hidden rounded-sm bg-secondary">
             <motion.img
-              src={portrait}
+              src={settings.aboutImageUrl || portrait}
               alt="Abstract portrait placeholder representing the practice"
               loading="lazy"
               decoding="async"
@@ -34,7 +36,7 @@ export function About() {
             <p className="eyebrow text-terracotta">About</p>
           </Reveal>
           <h2 className="display mt-6 text-[clamp(2.3rem,5vw,4.25rem)]">
-            <RevealWords text="Meet Shakuntla Malik" />
+              <RevealWords text={`Meet ${settings.brandName}`} />
           </h2>
 
           <Reveal delay={0.1}>
@@ -44,6 +46,7 @@ export function About() {
               predictions, but to help people understand themselves, read their timing and act
               with intention.
             </p>
+            <p className="mt-6 text-base leading-relaxed text-foreground/80">{settings.aboutContent}</p>
           </Reveal>
           <Reveal delay={0.16}>
             <p className="mt-6 text-sm leading-relaxed text-muted-foreground">
