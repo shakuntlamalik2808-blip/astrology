@@ -128,16 +128,16 @@ function WebsiteSettingsPage() {
   };
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-6 text-[#181512]">
       <div className="flex flex-col gap-4 md:flex-row md:items-end md:justify-between">
         <div>
           <p className="eyebrow text-gold">CMS</p>
-          <h1 className="display mt-2 text-3xl">Website Settings</h1>
+          <h1 className="display mt-2 text-3xl text-[#171512]">Website Settings</h1>
         </div>
         <button
           type="button"
           onClick={() => setShowPreview((prev) => !prev)}
-          className="inline-flex items-center gap-2 rounded-sm border border-ivory/20 bg-card px-4 py-2 text-sm text-ivory hover:border-gold/60 hover:text-gold"
+          className="inline-flex items-center gap-2 rounded-sm border border-[#d7c2a6] bg-[#f5efe4] px-4 py-2 text-sm text-[#1a1715] hover:border-[#c79f5b] hover:text-[#1a1715]"
         >
           <Eye className="size-4" />
           {showPreview ? "Hide preview" : "Preview changes"}
@@ -146,14 +146,14 @@ function WebsiteSettingsPage() {
 
       <div className="grid gap-6 xl:grid-cols-[minmax(0,1.5fr)_minmax(300px,0.7fr)]">
         <div className="space-y-6">
-          <section className="rounded-sm border border-border bg-card p-5">
+          <section className="rounded-sm border border-[#d7c2a6] bg-[#f7f2e8] p-5 text-[#171512] shadow-sm">
             <div className="mb-4 flex items-center justify-between gap-3">
-              <h2 className="font-display text-xl">General Settings</h2>
+              <h2 className="font-display text-xl text-[#171512]">General Settings</h2>
               <div className="flex gap-2">
-                <button type="button" onClick={resetSettings} className="inline-flex items-center gap-2 rounded-sm border border-ivory/15 px-3 py-2 text-sm text-ivory/70 hover:border-gold/60 hover:text-gold">
+                <button type="button" onClick={resetSettings} className="inline-flex items-center gap-2 rounded-sm border border-[#d7c2a6] bg-white/70 px-3 py-2 text-sm text-[#1f1d1a] hover:border-[#c79f5b] hover:text-[#1a1715]">
                   <RotateCcw className="size-4" /> Reset
                 </button>
-                <button type="button" onClick={saveChanges} className="inline-flex items-center gap-2 rounded-sm bg-gold px-3 py-2 text-sm font-medium text-ink hover:bg-gold-soft">
+                <button type="button" onClick={saveChanges} className="inline-flex items-center gap-2 rounded-sm bg-[#d4ad6d] px-3 py-2 text-sm font-medium text-[#1a1715] hover:bg-[#c79f5b]">
                   <Save className="size-4" /> Save Changes
                 </button>
               </div>
@@ -161,149 +161,149 @@ function WebsiteSettingsPage() {
 
             <div className="grid gap-4 md:grid-cols-2">
               <Field label="Brand / Company Name">
-                <input value={settings.brandName} onChange={(e) => updateField("brandName", e.target.value)} className="w-full rounded-sm border border-ivory/15 bg-transparent px-3 py-2.5 text-sm text-ivory outline-none focus:border-gold" />
+                <input value={settings.brandName} onChange={(e) => updateField("brandName", e.target.value)} className="w-full rounded-sm border border-[#d7c2a6] bg-white/80 px-3 py-2.5 text-sm text-[#171512] outline-none placeholder:text-[#6d655f] focus:border-[#c79f5b]" />
               </Field>
               <Field label="Email">
-                <input value={settings.companyEmail} onChange={(e) => updateField("companyEmail", e.target.value)} className="w-full rounded-sm border border-ivory/15 bg-transparent px-3 py-2.5 text-sm text-ivory outline-none focus:border-gold" />
+                <input value={settings.companyEmail} onChange={(e) => updateField("companyEmail", e.target.value)} className="w-full rounded-sm border border-[#d7c2a6] bg-white/80 px-3 py-2.5 text-sm text-[#171512] outline-none placeholder:text-[#6d655f] focus:border-[#c79f5b]" />
               </Field>
               <Field label="Phone">
-                <input value={settings.phone} onChange={(e) => updateField("phone", e.target.value)} className="w-full rounded-sm border border-ivory/15 bg-transparent px-3 py-2.5 text-sm text-ivory outline-none focus:border-gold" />
+                <input value={settings.phone} onChange={(e) => updateField("phone", e.target.value)} className="w-full rounded-sm border border-[#d7c2a6] bg-white/80 px-3 py-2.5 text-sm text-[#171512] outline-none placeholder:text-[#6d655f] focus:border-[#c79f5b]" />
               </Field>
               <Field label="WhatsApp Number">
-                <input value={settings.whatsapp} onChange={(e) => updateField("whatsapp", e.target.value)} className="w-full rounded-sm border border-ivory/15 bg-transparent px-3 py-2.5 text-sm text-ivory outline-none focus:border-gold" />
+                <input value={settings.whatsapp} onChange={(e) => updateField("whatsapp", e.target.value)} className="w-full rounded-sm border border-[#d7c2a6] bg-white/80 px-3 py-2.5 text-sm text-[#171512] outline-none placeholder:text-[#6d655f] focus:border-[#c79f5b]" />
               </Field>
               <Field label="Address">
-                <input value={settings.address} onChange={(e) => updateField("address", e.target.value)} className="w-full rounded-sm border border-ivory/15 bg-transparent px-3 py-2.5 text-sm text-ivory outline-none focus:border-gold md:col-span-2" />
+                <input value={settings.address} onChange={(e) => updateField("address", e.target.value)} className="w-full rounded-sm border border-[#d7c2a6] bg-white/80 px-3 py-2.5 text-sm text-[#171512] outline-none placeholder:text-[#6d655f] focus:border-[#c79f5b] md:col-span-2" />
               </Field>
             </div>
           </section>
 
-          <section className="rounded-sm border border-border bg-card p-5">
-            <h2 className="font-display text-xl">Pricing & Services</h2>
+          <section className="rounded-sm border border-[#d7c2a6] bg-[#f7f2e8] p-5 text-[#171512] shadow-sm">
+            <h2 className="font-display text-xl text-[#171512]">Pricing & Services</h2>
 
             <div className="mt-4 space-y-4">
               <div className="grid gap-4 md:grid-cols-2">
                 <Field label="Hero Title">
-                  <input value={settings.heroTitle} onChange={(e) => updateField("heroTitle", e.target.value)} className="w-full rounded-sm border border-ivory/15 bg-transparent px-3 py-2.5 text-sm text-ivory outline-none focus:border-gold" />
+                  <input value={settings.heroTitle} onChange={(e) => updateField("heroTitle", e.target.value)} className="w-full rounded-sm border border-[#d7c2a6] bg-white/80 px-3 py-2.5 text-sm text-[#171512] outline-none placeholder:text-[#6d655f] focus:border-[#c79f5b]" />
                 </Field>
                 <Field label="Hero Subtitle">
-                  <input value={settings.heroSubtitle} onChange={(e) => updateField("heroSubtitle", e.target.value)} className="w-full rounded-sm border border-ivory/15 bg-transparent px-3 py-2.5 text-sm text-ivory outline-none focus:border-gold" />
+                  <input value={settings.heroSubtitle} onChange={(e) => updateField("heroSubtitle", e.target.value)} className="w-full rounded-sm border border-[#d7c2a6] bg-white/80 px-3 py-2.5 text-sm text-[#171512] outline-none placeholder:text-[#6d655f] focus:border-[#c79f5b]" />
                 </Field>
               </div>
 
               <Field label="Homepage Description">
-                <textarea value={settings.homepageDescription} onChange={(e) => updateField("homepageDescription", e.target.value)} rows={4} className="w-full rounded-sm border border-ivory/15 bg-transparent px-3 py-2.5 text-sm text-ivory outline-none focus:border-gold" />
+                <textarea value={settings.homepageDescription} onChange={(e) => updateField("homepageDescription", e.target.value)} rows={4} className="w-full rounded-sm border border-[#d7c2a6] bg-white/80 px-3 py-2.5 text-sm text-[#171512] outline-none placeholder:text-[#6d655f] focus:border-[#c79f5b]" />
               </Field>
 
               <div className="space-y-3">
-                <p className="text-sm font-medium text-ivory/80">Main Services</p>
+                <p className="text-sm font-medium text-[#2f2b28]">Main Services</p>
                 {settings.services.map((service, index) => (
-                  <div key={service.id} className="grid gap-3 rounded-sm border border-border bg-background/40 p-3 md:grid-cols-[1.2fr_0.5fr_1.5fr]">
-                    <input value={service.name} onChange={(e) => updateService(index, "name", e.target.value)} className="rounded-sm border border-ivory/15 bg-transparent px-3 py-2 text-sm text-ivory outline-none focus:border-gold" />
-                    <input value={service.price} onChange={(e) => updateService(index, "price", e.target.value)} className="rounded-sm border border-ivory/15 bg-transparent px-3 py-2 text-sm text-ivory outline-none focus:border-gold" />
-                    <input value={service.description} onChange={(e) => updateService(index, "description", e.target.value)} className="rounded-sm border border-ivory/15 bg-transparent px-3 py-2 text-sm text-ivory outline-none focus:border-gold" />
+                  <div key={service.id} className="grid gap-3 rounded-sm border border-[#d7c2a6] bg-[#f3ebdd] p-3 md:grid-cols-[1.2fr_0.5fr_1.5fr]">
+                    <input value={service.name} onChange={(e) => updateService(index, "name", e.target.value)} className="rounded-sm border border-[#d7c2a6] bg-white/80 px-3 py-2 text-sm text-[#171512] outline-none placeholder:text-[#6d655f] focus:border-[#c79f5b]" />
+                    <input value={service.price} onChange={(e) => updateService(index, "price", e.target.value)} className="rounded-sm border border-[#d7c2a6] bg-white/80 px-3 py-2 text-sm text-[#171512] outline-none placeholder:text-[#6d655f] focus:border-[#c79f5b]" />
+                    <input value={service.description} onChange={(e) => updateService(index, "description", e.target.value)} className="rounded-sm border border-[#d7c2a6] bg-white/80 px-3 py-2 text-sm text-[#171512] outline-none placeholder:text-[#6d655f] focus:border-[#c79f5b]" />
                   </div>
                 ))}
               </div>
 
               <div className="space-y-3">
-                <p className="text-sm font-medium text-ivory/80">Packages</p>
+                <p className="text-sm font-medium text-[#2f2b28]">Packages</p>
                 {settings.packages.map((pkg, index) => (
-                  <div key={pkg.id} className="grid gap-3 rounded-sm border border-border bg-background/40 p-3 md:grid-cols-[1.2fr_0.5fr_1.5fr]">
-                    <input value={pkg.name} onChange={(e) => updatePackage(index, "name", e.target.value)} className="rounded-sm border border-ivory/15 bg-transparent px-3 py-2 text-sm text-ivory outline-none focus:border-gold" />
-                    <input value={pkg.price} onChange={(e) => updatePackage(index, "price", e.target.value)} className="rounded-sm border border-ivory/15 bg-transparent px-3 py-2 text-sm text-ivory outline-none focus:border-gold" />
-                    <input value={pkg.description} onChange={(e) => updatePackage(index, "description", e.target.value)} className="rounded-sm border border-ivory/15 bg-transparent px-3 py-2 text-sm text-ivory outline-none focus:border-gold" />
+                  <div key={pkg.id} className="grid gap-3 rounded-sm border border-[#d7c2a6] bg-[#f3ebdd] p-3 md:grid-cols-[1.2fr_0.5fr_1.5fr]">
+                    <input value={pkg.name} onChange={(e) => updatePackage(index, "name", e.target.value)} className="rounded-sm border border-[#d7c2a6] bg-white/80 px-3 py-2 text-sm text-[#171512] outline-none placeholder:text-[#6d655f] focus:border-[#c79f5b]" />
+                    <input value={pkg.price} onChange={(e) => updatePackage(index, "price", e.target.value)} className="rounded-sm border border-[#d7c2a6] bg-white/80 px-3 py-2 text-sm text-[#171512] outline-none placeholder:text-[#6d655f] focus:border-[#c79f5b]" />
+                    <input value={pkg.description} onChange={(e) => updatePackage(index, "description", e.target.value)} className="rounded-sm border border-[#d7c2a6] bg-white/80 px-3 py-2 text-sm text-[#171512] outline-none placeholder:text-[#6d655f] focus:border-[#c79f5b]" />
                   </div>
                 ))}
               </div>
             </div>
           </section>
 
-          <section className="rounded-sm border border-border bg-card p-5">
-            <h2 className="font-display text-xl">Content Pages</h2>
+          <section className="rounded-sm border border-[#d7c2a6] bg-[#f7f2e8] p-5 text-[#171512] shadow-sm">
+            <h2 className="font-display text-xl text-[#171512]">Content Pages</h2>
             <div className="mt-4 grid gap-4">
               <Field label="About Page Content">
-                <textarea value={settings.aboutContent} onChange={(e) => updateField("aboutContent", e.target.value)} rows={5} className="w-full rounded-sm border border-ivory/15 bg-transparent px-3 py-2.5 text-sm text-ivory outline-none focus:border-gold" />
+                <textarea value={settings.aboutContent} onChange={(e) => updateField("aboutContent", e.target.value)} rows={5} className="w-full rounded-sm border border-[#d7c2a6] bg-white/80 px-3 py-2.5 text-sm text-[#171512] outline-none placeholder:text-[#6d655f] focus:border-[#c79f5b]" />
               </Field>
               <Field label="Academy Page Content">
-                <textarea value={settings.academyContent} onChange={(e) => updateField("academyContent", e.target.value)} rows={5} className="w-full rounded-sm border border-ivory/15 bg-transparent px-3 py-2.5 text-sm text-ivory outline-none focus:border-gold" />
+                <textarea value={settings.academyContent} onChange={(e) => updateField("academyContent", e.target.value)} rows={5} className="w-full rounded-sm border border-[#d7c2a6] bg-white/80 px-3 py-2.5 text-sm text-[#171512] outline-none placeholder:text-[#6d655f] focus:border-[#c79f5b]" />
               </Field>
               <Field label="Booking Page Content">
-                <textarea value={settings.bookingContent} onChange={(e) => updateField("bookingContent", e.target.value)} rows={5} className="w-full rounded-sm border border-ivory/15 bg-transparent px-3 py-2.5 text-sm text-ivory outline-none focus:border-gold" />
+                <textarea value={settings.bookingContent} onChange={(e) => updateField("bookingContent", e.target.value)} rows={5} className="w-full rounded-sm border border-[#d7c2a6] bg-white/80 px-3 py-2.5 text-sm text-[#171512] outline-none placeholder:text-[#6d655f] focus:border-[#c79f5b]" />
               </Field>
             </div>
           </section>
 
-          <section className="rounded-sm border border-border bg-card p-5">
-            <h2 className="font-display text-xl">Media & Branding</h2>
+          <section className="rounded-sm border border-[#d7c2a6] bg-[#f7f2e8] p-5 text-[#171512] shadow-sm">
+            <h2 className="font-display text-xl text-[#171512]">Media & Branding</h2>
             <div className="mt-4 grid gap-4 md:grid-cols-2">
               <Field label="Logo URL">
-                <input value={settings.logoUrl} onChange={(e) => updateField("logoUrl", e.target.value)} className="w-full rounded-sm border border-ivory/15 bg-transparent px-3 py-2.5 text-sm text-ivory outline-none focus:border-gold" />
+                <input value={settings.logoUrl} onChange={(e) => updateField("logoUrl", e.target.value)} className="w-full rounded-sm border border-[#d7c2a6] bg-white/80 px-3 py-2.5 text-sm text-[#171512] outline-none placeholder:text-[#6d655f] focus:border-[#c79f5b]" />
               </Field>
               <Field label="Hero Image URL">
-                <input value={settings.heroImageUrl} onChange={(e) => updateField("heroImageUrl", e.target.value)} className="w-full rounded-sm border border-ivory/15 bg-transparent px-3 py-2.5 text-sm text-ivory outline-none focus:border-gold" />
+                <input value={settings.heroImageUrl} onChange={(e) => updateField("heroImageUrl", e.target.value)} className="w-full rounded-sm border border-[#d7c2a6] bg-white/80 px-3 py-2.5 text-sm text-[#171512] outline-none placeholder:text-[#6d655f] focus:border-[#c79f5b]" />
               </Field>
               <Field label="Service Image URL">
-                <input value={settings.serviceImageUrl} onChange={(e) => updateField("serviceImageUrl", e.target.value)} className="w-full rounded-sm border border-ivory/15 bg-transparent px-3 py-2.5 text-sm text-ivory outline-none focus:border-gold" />
+                <input value={settings.serviceImageUrl} onChange={(e) => updateField("serviceImageUrl", e.target.value)} className="w-full rounded-sm border border-[#d7c2a6] bg-white/80 px-3 py-2.5 text-sm text-[#171512] outline-none placeholder:text-[#6d655f] focus:border-[#c79f5b]" />
               </Field>
               <Field label="About Image URL">
-                <input value={settings.aboutImageUrl} onChange={(e) => updateField("aboutImageUrl", e.target.value)} className="w-full rounded-sm border border-ivory/15 bg-transparent px-3 py-2.5 text-sm text-ivory outline-none focus:border-gold" />
+                <input value={settings.aboutImageUrl} onChange={(e) => updateField("aboutImageUrl", e.target.value)} className="w-full rounded-sm border border-[#d7c2a6] bg-white/80 px-3 py-2.5 text-sm text-[#171512] outline-none placeholder:text-[#6d655f] focus:border-[#c79f5b]" />
               </Field>
             </div>
           </section>
 
-          <section className="rounded-sm border border-border bg-card p-5">
-            <h2 className="font-display text-xl">Contact & Social Links</h2>
+          <section className="rounded-sm border border-[#d7c2a6] bg-[#f7f2e8] p-5 text-[#171512] shadow-sm">
+            <h2 className="font-display text-xl text-[#171512]">Contact & Social Links</h2>
             <div className="mt-4 grid gap-4 md:grid-cols-2">
               <Field label="Instagram URL">
-                <input value={settings.instagram} onChange={(e) => updateField("instagram", e.target.value)} className="w-full rounded-sm border border-ivory/15 bg-transparent px-3 py-2.5 text-sm text-ivory outline-none focus:border-gold" />
+                <input value={settings.instagram} onChange={(e) => updateField("instagram", e.target.value)} className="w-full rounded-sm border border-[#d7c2a6] bg-white/80 px-3 py-2.5 text-sm text-[#171512] outline-none placeholder:text-[#6d655f] focus:border-[#c79f5b]" />
               </Field>
               <Field label="YouTube URL">
-                <input value={settings.youtube} onChange={(e) => updateField("youtube", e.target.value)} className="w-full rounded-sm border border-ivory/15 bg-transparent px-3 py-2.5 text-sm text-ivory outline-none focus:border-gold" />
+                <input value={settings.youtube} onChange={(e) => updateField("youtube", e.target.value)} className="w-full rounded-sm border border-[#d7c2a6] bg-white/80 px-3 py-2.5 text-sm text-[#171512] outline-none placeholder:text-[#6d655f] focus:border-[#c79f5b]" />
               </Field>
               <Field label="Facebook URL">
-                <input value={settings.facebook} onChange={(e) => updateField("facebook", e.target.value)} className="w-full rounded-sm border border-ivory/15 bg-transparent px-3 py-2.5 text-sm text-ivory outline-none focus:border-gold lg:col-span-2" />
+                <input value={settings.facebook} onChange={(e) => updateField("facebook", e.target.value)} className="w-full rounded-sm border border-[#d7c2a6] bg-white/80 px-3 py-2.5 text-sm text-[#171512] outline-none placeholder:text-[#6d655f] focus:border-[#c79f5b] lg:col-span-2" />
               </Field>
             </div>
           </section>
         </div>
 
         {showPreview && (
-          <aside className="rounded-sm border border-border bg-card p-5">
-            <div className="mb-4 flex items-center gap-2 text-gold">
+          <aside className="rounded-sm border border-[#d7c2a6] bg-[#f7f2e8] p-5 text-[#171512] shadow-sm">
+            <div className="mb-4 flex items-center gap-2 text-[#975a1f]">
               <Sparkles className="size-4" />
               <p className="text-sm font-medium uppercase tracking-[0.16em]">Live Preview</p>
             </div>
 
-            <div className="overflow-hidden rounded-sm border border-border bg-background">
+            <div className="overflow-hidden rounded-sm border border-[#d7c2a6] bg-[#f3ebdd]">
               <img src={settings.heroImageUrl} alt={settings.heroTitle} className="h-40 w-full object-cover" />
               <div className="p-4">
                 <img src={settings.logoUrl} alt={settings.brandName} className="mb-4 h-12 w-12 rounded-full object-cover" />
-                <p className="text-xs uppercase tracking-[0.18em] text-gold">{settings.brandName}</p>
-                <h3 className="mt-2 font-display text-2xl leading-tight">{previewData.title}</h3>
-                <p className="mt-2 text-sm text-ivory/70">{previewData.subtitle}</p>
-                <p className="mt-3 text-sm text-ivory/60">{previewData.description}</p>
+                <p className="text-xs uppercase tracking-[0.18em] text-[#8a5d22]">{settings.brandName}</p>
+                <h3 className="mt-2 font-display text-2xl leading-tight text-[#171512]">{previewData.title}</h3>
+                <p className="mt-2 text-sm text-[#403b36]">{previewData.subtitle}</p>
+                <p className="mt-3 text-sm text-[#4a453f]">{previewData.description}</p>
               </div>
             </div>
 
             <div className="mt-5 space-y-3">
               {previewData.priceList.map((service) => (
-                <div key={service.id} className="rounded-sm border border-border bg-background/60 p-3">
+                <div key={service.id} className="rounded-sm border border-[#d7c2a6] bg-[#f3ebdd] p-3">
                   <div className="flex items-center justify-between gap-3">
-                    <p className="font-medium">{service.name}</p>
-                    <span className="text-sm text-gold">{service.price}</span>
+                    <p className="font-medium text-[#171512]">{service.name}</p>
+                    <span className="text-sm text-[#8a5d22]">{service.price}</span>
                   </div>
-                  <p className="mt-1 text-sm text-ivory/65">{service.description}</p>
+                  <p className="mt-1 text-sm text-[#4a453f]">{service.description}</p>
                 </div>
               ))}
             </div>
 
-            <div className="mt-5 rounded-sm border border-border bg-background/60 p-3">
-              <div className="mb-2 flex items-center gap-2 text-sm text-gold">
+            <div className="mt-5 rounded-sm border border-[#d7c2a6] bg-[#f3ebdd] p-3">
+              <div className="mb-2 flex items-center gap-2 text-sm text-[#8a5d22]">
                 <ImageIcon className="size-4" />
                 Media summary
               </div>
-              <p className="text-xs text-ivory/60">Hero image, services image, about image and brand logo can all be updated here.</p>
+              <p className="text-xs text-[#4a453f]">Hero image, services image, about image and brand logo can all be updated here.</p>
             </div>
           </aside>
         )}
@@ -314,8 +314,8 @@ function WebsiteSettingsPage() {
 
 function Field({ label, children }: { label: string; children: React.ReactNode }) {
   return (
-    <label className="block text-sm text-ivory/75">
-      <span className="mb-2 block text-sm font-medium text-ivory/70">{label}</span>
+    <label className="block text-sm text-[#1f1d1a]">
+      <span className="mb-2 block text-sm font-medium text-[#1f1d1a]">{label}</span>
       {children}
     </label>
   );
