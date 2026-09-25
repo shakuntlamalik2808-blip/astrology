@@ -1,42 +1,61 @@
-# Shakuntla Malik — Astrology Consulting & Academy
+# Starts & Sutra — Shakuntla Malik
 
-Next.js 14 (App Router) marketing site and admin panel for a professional Jyotish consulting practice. Tailwind CSS, shadcn/ui-style components, NextAuth, and Prisma.
+Official website for **Shakuntla Malik — Astrology Consulting & Academy**, based in Faridabad and serving clients worldwide. The site positions astrology as a counselling practice: quiet, considered guidance through Jyotish — not spectacle.
 
-## Stack
+## Website Sections
 
-- Next.js 14 App Router + TypeScript
-- Tailwind CSS with cosmic blue (`#0B192C`) and gold (`#D4AF37`)
-- Inter + Playfair Display
-- NextAuth credentials for `/admin`
-- Prisma (SQLite locally) for clients, appointments, session notes, and booking records
-- WhatsApp-based consultation requests instead of online payment checkout
+| Section                  | What it offers                                                                                                                     |
+| ------------------------ | ---------------------------------------------------------------------------------------------------------------------------------- |
+| **Hero**                 | Introduction to the practice — Jyotish, Counseling, Guidance — with direct actions to book a consultation or explore the practice. |
+| **The Practice**         | The philosophy behind the work: astrology as a counselling discipline rooted in listening and practical guidance.                  |
+| **Practice Pillars**     | The three foundations of the practice at a glance.                                                                                 |
+| **Services**             | The paid consultations with live pricing (see below).                                                                              |
+| **Consultation Journey** | A four-step walkthrough of what working together looks like, from booking to follow-up.                                            |
+| **About**                | Shakuntla Malik's background, credentials and approach.                                                                            |
+| **Academy**              | The Astrology Academy — learning programs for students of Jyotish.                                                                 |
+| **Booking**              | A dedicated consultation booking flow with the client's details and request.                                                       |
+| **Footer**               | Contact details, practice location and navigation.                                                                                 |
 
-## Setup
+## Services & Pricing
 
-```bash
-npm install
-copy .env.example .env
-npx prisma generate
-npx prisma db push
-npm run dev
-```
+All amounts are in **INR (₹)**.
 
-On macOS/Linux use `cp .env.example .env` instead of `copy`.
+| Service                    | Price   | Format                       |
+| -------------------------- | ------- | ---------------------------- |
+| Single Kundli Consultation | ₹2,100  | 60-minute one-on-one reading |
+| Home Vastu                 | ₹50,000 | Full property review         |
+| Match Making               | ₹2,100  | Compatibility review         |
 
-Open [http://localhost:3000](http://localhost:3000). Sign in to admin at `/admin/login` with `ADMIN_EMAIL` / `ADMIN_PASSWORD`.
+Additional guidance and remedies are discussed within consultations; academy program fees are shared on enquiry.
 
-## Routes
+## Booking a Consultation
 
-| Path | Purpose |
-| --- | --- |
-| `/` | Home, authority hero, three practice pillars |
-| `/about` | Biography |
-| `/services` | Pricing grid, retainers, Vastu, rectification |
-| `/academy` | Course directory |
-| `/book` | Timezone calendar + WhatsApp booking request form |
-| `/admin/dashboard` | Metrics |
-| `/admin/clients` | CRM + counseling notes |
-| `/admin/appointments` | Kundli vs daily counseling calendar |
-| `/admin/payments` | Fee tracking |
+Visitors can request a consultation directly from the website:
 
-Admin CRM currently uses demo records in `lib/data.ts`. Wire the table to `GET/POST/PATCH /api/clients` after Prisma is running.
+1. Choose a service from the **Services** section or go to **Book a Consultation**.
+2. Submit the booking form with their details and preferred service.
+3. The request is stored securely and reviewed by the practice.
+
+## Admin Panel
+
+A private, unlisted administration area manages the site's day-to-day operations.
+
+- **Admin URL:** `/admin`
+- **Sign-in URL:** `/admin/login`
+- Sign-in is via **Google sign-in only** — no email/password form.
+- Access is restricted: a Google account can sign in only if it has been approved as an admin for the practice.
+- The admin area is never linked from the public site and is excluded from search engines.
+- From the admin panel the practice can review and manage consultation bookings, enquiries and site content.
+
+## Design & Experience
+
+- **Midnight & Brass** visual language — deep celestial tones with warm brass and ivory accents.
+- Libre Baskerville for display headings, IBM Plex Sans for body text.
+- Cinematic editorial layout with generous whitespace and restrained, purposeful motion.
+- Fully responsive across desktop and mobile.
+- Accessibility: keyboard-visible focus states, semantic structure, and reduced-motion support for visitors who prefer it.
+
+## Practical Notes
+
+- The site respects your privacy preferences: ambient animation is automatically reduced if your device requests it.
+- For enquiries not covered by the booking form, reach out through the contact details in the footer.

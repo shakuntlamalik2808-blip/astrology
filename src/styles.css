@@ -1,0 +1,271 @@
+@import "tailwindcss" source(none);
+@source "../src";
+@import "tw-animate-css";
+
+@custom-variant dark (&:is(.dark *));
+
+/*
+ * Shakuntla Malik — Jyotish design system.
+ * Deep midnight ground, warm ivory, antique gold, terracotta.
+ */
+
+@theme inline {
+  --radius-sm: calc(var(--radius) - 4px);
+  --radius-md: calc(var(--radius) - 2px);
+  --radius-lg: var(--radius);
+  --radius-xl: calc(var(--radius) + 4px);
+  --radius-2xl: calc(var(--radius) + 8px);
+  --radius-3xl: calc(var(--radius) + 12px);
+  --radius-4xl: calc(var(--radius) + 16px);
+
+  --font-display: "Libre Baskerville", ui-serif, Georgia, serif;
+  --font-sans: "IBM Plex Sans", ui-sans-serif, system-ui, sans-serif;
+
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --color-card: var(--card);
+  --color-card-foreground: var(--card-foreground);
+  --color-popover: var(--popover);
+  --color-popover-foreground: var(--popover-foreground);
+  --color-primary: var(--primary);
+  --color-primary-foreground: var(--primary-foreground);
+  --color-secondary: var(--secondary);
+  --color-secondary-foreground: var(--secondary-foreground);
+  --color-muted: var(--muted);
+  --color-muted-foreground: var(--muted-foreground);
+  --color-accent: var(--accent);
+  --color-accent-foreground: var(--accent-foreground);
+  --color-destructive: var(--destructive);
+  --color-destructive-foreground: var(--destructive-foreground);
+  --color-border: var(--border);
+  --color-input: var(--input);
+  --color-ring: var(--ring);
+  --color-ring-offset-background: var(--background);
+
+  --color-ink: var(--ink);
+  --color-ink-soft: var(--ink-soft);
+  --color-ivory: var(--ivory);
+  --color-gold: var(--gold);
+  --color-gold-soft: var(--gold-soft);
+  --color-terracotta: var(--terracotta);
+  --color-celestial: var(--celestial);
+
+  --color-chart-1: var(--chart-1);
+  --color-chart-2: var(--chart-2);
+  --color-chart-3: var(--chart-3);
+  --color-chart-4: var(--chart-4);
+  --color-chart-5: var(--chart-5);
+  --color-sidebar: var(--sidebar);
+  --color-sidebar-foreground: var(--sidebar-foreground);
+  --color-sidebar-primary: var(--sidebar-primary);
+  --color-sidebar-primary-foreground: var(--sidebar-primary-foreground);
+  --color-sidebar-accent: var(--sidebar-accent);
+  --color-sidebar-accent-foreground: var(--sidebar-accent-foreground);
+  --color-sidebar-border: var(--sidebar-border);
+  --color-sidebar-ring: var(--sidebar-ring);
+}
+
+:root {
+  --radius: 0.25rem;
+
+  --ink: oklch(0.19 0.035 262);
+  --ink-soft: oklch(0.27 0.035 262);
+  --ivory: oklch(0.95 0.018 85);
+  --gold: oklch(0.76 0.09 78);
+  --gold-soft: oklch(0.86 0.06 82);
+  --terracotta: oklch(0.55 0.1 34);
+  --celestial: oklch(0.62 0.062 250);
+
+  --background: oklch(0.95 0.018 85);
+  --foreground: oklch(0.19 0.035 262);
+  --card: oklch(0.975 0.012 85);
+  --card-foreground: oklch(0.19 0.035 262);
+  --popover: oklch(0.975 0.012 85);
+  --popover-foreground: oklch(0.19 0.035 262);
+  --primary: oklch(0.19 0.035 262);
+  --primary-foreground: oklch(0.95 0.018 85);
+  --secondary: oklch(0.91 0.025 80);
+  --secondary-foreground: oklch(0.27 0.035 262);
+  --muted: oklch(0.91 0.025 80);
+  --muted-foreground: oklch(0.48 0.024 265);
+  --accent: oklch(0.78 0.092 82);
+  --accent-foreground: oklch(0.18 0.032 264);
+  --destructive: oklch(0.577 0.245 27.325);
+  --destructive-foreground: oklch(0.98 0.003 248);
+  --border: oklch(0.87 0.018 80);
+  --input: oklch(0.87 0.018 80);
+  --ring: oklch(0.78 0.092 82);
+
+  --gradient-night: radial-gradient(
+      110% 80% at 50% 0%,
+      color-mix(in oklab, var(--celestial) 22%, transparent) 0%,
+      transparent 60%
+    ),
+    linear-gradient(180deg, var(--ink) 0%, oklch(0.14 0.028 264) 100%);
+  --gradient-gold: linear-gradient(120deg, var(--gold) 0%, var(--gold-soft) 45%, var(--terracotta) 100%);
+  --shadow-soft: 0 24px 60px -32px color-mix(in oklab, var(--ink) 45%, transparent);
+  --shadow-lift: 0 40px 90px -45px color-mix(in oklab, var(--ink) 60%, transparent);
+  --ease-silk: cubic-bezier(0.22, 1, 0.36, 1);
+
+  --chart-1: oklch(0.78 0.092 82);
+  --chart-2: oklch(0.6 0.115 42);
+  --chart-3: oklch(0.62 0.062 250);
+  --chart-4: oklch(0.48 0.024 265);
+  --chart-5: oklch(0.26 0.03 264);
+  --sidebar: oklch(0.985 0.008 85);
+  --sidebar-foreground: oklch(0.18 0.032 264);
+  --sidebar-primary: oklch(0.18 0.032 264);
+  --sidebar-primary-foreground: oklch(0.965 0.012 85);
+  --sidebar-accent: oklch(0.93 0.017 80);
+  --sidebar-accent-foreground: oklch(0.26 0.03 264);
+  --sidebar-border: oklch(0.87 0.018 80);
+  --sidebar-ring: oklch(0.78 0.092 82);
+}
+
+@layer base {
+  * {
+    border-color: var(--color-border);
+  }
+
+  html {
+    scroll-behavior: smooth;
+  }
+
+  body {
+    background-color: var(--color-background);
+    color: var(--color-foreground);
+    font-family: var(--font-sans);
+    font-synthesis-weight: none;
+    -webkit-font-smoothing: antialiased;
+    text-rendering: optimizeLegibility;
+  }
+
+  :focus-visible {
+    outline: 2px solid var(--gold);
+    outline-offset: 4px;
+  }
+
+  section[id] {
+    scroll-margin-top: 6rem;
+  }
+
+  ::selection {
+    background: color-mix(in oklab, var(--gold) 45%, transparent);
+  }
+}
+
+@utility surface-night {
+  background: var(--gradient-night);
+  color: var(--ivory);
+}
+
+@utility text-gold-gradient {
+  background: var(--gradient-gold);
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+}
+
+@utility display {
+  font-family: var(--font-display);
+  font-weight: 400;
+  line-height: 1.04;
+  letter-spacing: 0;
+}
+
+@utility eyebrow {
+  font-size: 0.7rem;
+  letter-spacing: 0.22em;
+  text-transform: uppercase;
+  font-weight: 500;
+}
+
+@utility section-rule {
+  border-top: 1px solid color-mix(in oklab, currentColor 12%, transparent);
+}
+
+@utility editorial-section {
+  padding-block: clamp(6rem, 10vw, 10rem);
+}
+
+@utility hairline {
+  border-top: 1px solid color-mix(in oklab, currentColor 18%, transparent);
+}
+
+@utility grain {
+  position: relative;
+  &::after {
+    content: "";
+    position: absolute;
+    inset: 0;
+    pointer-events: none;
+    opacity: 0.35;
+    background-image: radial-gradient(
+      color-mix(in oklab, var(--ivory) 10%, transparent) 1px,
+      transparent 1px
+    );
+    background-size: 3px 3px;
+  }
+}
+
+@keyframes slow-spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+@keyframes drift {
+  0%,
+  100% {
+    transform: translate3d(0, 0, 0);
+  }
+  50% {
+    transform: translate3d(0, -14px, 0);
+  }
+}
+
+@keyframes twinkle {
+  0%,
+  100% {
+    opacity: 0.25;
+  }
+  50% {
+    opacity: 0.9;
+  }
+}
+
+@keyframes line-breathe {
+  0%, 100% { transform: scaleY(0.35); opacity: 0.28; }
+  50% { transform: scaleY(1); opacity: 0.8; }
+}
+
+@utility animate-slow-spin {
+  animation: slow-spin 140s linear infinite;
+}
+
+@utility animate-slow-spin-reverse {
+  animation: slow-spin 200s linear infinite reverse;
+}
+
+@utility animate-drift {
+  animation: drift 12s var(--ease-silk) infinite;
+}
+
+@utility animate-twinkle {
+  animation: twinkle 7s ease-in-out infinite;
+}
+
+@utility animate-line-breathe {
+  animation: line-breathe 4.5s var(--ease-silk) infinite;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.001ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.001ms !important;
+    scroll-behavior: auto !important;
+  }
+}
