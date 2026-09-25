@@ -7,7 +7,7 @@ export function SiteFooter() {
         <div>
           <p className="font-serif text-2xl">Shakuntla Malik</p>
           <p className="mt-3 max-w-sm text-sm text-ivory/70">
-            Counseling psychology, North Indian Jyotish, and Lal Kitab — practice based in Faridabad, serving clients worldwide.
+            Counseling psychology,  Jyotish, and Lal Kitab — practice based in Faridabad, serving clients worldwide.
           </p>
         </div>
         <div>

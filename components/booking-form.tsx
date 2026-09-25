@@ -7,8 +7,8 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { CONSULTATION_PRICE_INR } from "@/lib/data";
-import { formatInr } from "@/lib/utils";
+
+const WHATSAPP_NUMBER = (process.env.NEXT_PUBLIC_WHATSAPP_NUMBER ?? "919000000000").replace(/\D/g, "");
 
 const TIMEZONES = [
   "Asia/Kolkata",
@@ -34,35 +34,41 @@ export function BookingForm() {
     return Array.from({ length: 7 }, (_, i) => addDays(start, i));
   }, [date]);
 
-  async function onSubmit(event: React.FormEvent<HTMLFormElement>) {
+  function onSubmit(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault();
     const form = new FormData(event.currentTarget);
-    setStatus("loading");
-    try {
-      const res = await fetch("/api/checkout", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          kind: "SINGLE_CONSULTATION",
-          amountInr: CONSULTATION_PRICE_INR,
-          timezone,
-          date,
-          slot,
-          name: form.get("name"),
-          email: form.get("email"),
-          birthPlace: form.get("birthPlace"),
-          birthDate: form.get("birthDate"),
-          birthTime: form.get("birthTime"),
-        }),
-      });
-      const data = await res.json();
-      if (!res.ok) throw new Error(data.error ?? "Checkout failed");
-      setStatus("ok");
-      setMessage(data.message ?? "Checkout session created.");
-    } catch (error) {
+
+    if (!slot) {
       setStatus("error");
-      setMessage(error instanceof Error ? error.message : "Checkout failed");
+      setMessage("Please select a time slot before sending your consultation request.");
+      return;
     }
+
+    setStatus("loading");
+
+    const name = String(form.get("name") ?? "").trim();
+    const email = String(form.get("email") ?? "").trim();
+    const birthDate = String(form.get("birthDate") ?? "").trim();
+    const birthTime = String(form.get("birthTime") ?? "").trim();
+    const birthPlace = String(form.get("birthPlace") ?? "").trim();
+
+    const text = [
+      "Hello, I would like to book a consultation.",
+      `Name: ${name}`,
+      `Email: ${email}`,
+      `Preferred timezone: ${timezone}`,
+      `Preferred date: ${date}`,
+      `Preferred slot: ${slot}`,
+      `Birth date: ${birthDate || "Not provided"}`,
+      `Birth time: ${birthTime || "Not provided"}`,
+      `Birth place: ${birthPlace || "Not provided"}`,
+      "Please confirm the booking.",
+    ].join("\n");
+
+    const whatsappUrl = `https://wa.me/${WHATSAPP_NUMBER}?text=${encodeURIComponent(text)}`;
+    window.open(whatsappUrl, "_blank", "noopener,noreferrer");
+    setStatus("ok");
+    setMessage("Your WhatsApp booking request is ready to send.");
   }
 
   return (
@@ -131,8 +137,8 @@ export function BookingForm() {
 
       <Card>
         <CardHeader>
-          <CardTitle>Checkout · {formatInr(CONSULTATION_PRICE_INR)}</CardTitle>
-          <CardDescription>Single Kundli consultation. Razorpay/Stripe placeholder.</CardDescription>
+          <CardTitle>Consultation request</CardTitle>
+          <CardDescription>Share your details and preferred time. We’ll confirm by WhatsApp.</CardDescription>
         </CardHeader>
         <CardContent className="space-y-4">
           <div className="space-y-2">
@@ -158,7 +164,7 @@ export function BookingForm() {
             <Input id="birthPlace" name="birthPlace" placeholder="City, country" required />
           </div>
           <Button type="submit" variant="gold" className="w-full" disabled={!slot || status === "loading"}>
-            {status === "loading" ? "Creating order…" : `Pay ${formatInr(CONSULTATION_PRICE_INR)}`}
+            {status === "loading" ? "Preparing message…" : "Send WhatsApp request"}
           </Button>
           {message ? (
             <p className={`text-sm ${status === "error" ? "text-destructive" : "text-muted-foreground"}`}>{message}</p>

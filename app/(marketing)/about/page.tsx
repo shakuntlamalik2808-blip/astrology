@@ -2,7 +2,7 @@ import type { Metadata } from "next";
 
 export const metadata: Metadata = {
   title: "About",
-  description: "Biography of Shakuntla Malik — counseling psychology, North Indian Jyotish, and Lal Kitab.",
+  description: "Biography of Shakuntla Malik — counseling psychology,  Jyotish, and Lal Kitab.",
 };
 
 export default function AboutPage() {
@@ -13,7 +13,7 @@ export default function AboutPage() {
       <div className="gold-rule mt-6" />
       <p className="mt-8 text-lg text-muted-foreground">
         A Faridabad-based consulting astrologer whose work sits at the intersection of counseling psychology and
-        classical North Indian Jyotish. Clients come for charts; they stay because the conversation is precise, calm,
+        classical  Jyotish. Clients come for charts; they stay because the conversation is precise, calm,
         and accountable.
       </p>
       <div className="prose prose-slate mt-10 max-w-none dark:prose-invert">
@@ -23,9 +23,9 @@ export default function AboutPage() {
           language that never outsources a client’s agency to a planet. Astrology here is a timing and pattern lens —
           not a verdict.
         </p>
-        <h2 className="mt-10 font-serif text-2xl">North Indian chart interpretation</h2>
+        <h2 className="mt-10 font-serif text-2xl"> chart interpretation</h2>
         <p className="mt-3 leading-relaxed text-foreground/80">
-          Readings use the diamond-style North Indian chart, with attention to house lords, yogas, Navamsa, and
+          Readings use the diamond-style  chart, with attention to house lords, yogas, Navamsa, and
           Vimshottari dasha sequence. The aim is a usable map: what is ripening now, what can wait, and where effort
           is likely to compound.
         </p>

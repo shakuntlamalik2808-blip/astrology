@@ -8,8 +8,8 @@ Next.js 14 (App Router) marketing site and admin panel for a professional Jyotis
 - Tailwind CSS with cosmic blue (`#0B192C`) and gold (`#D4AF37`)
 - Inter + Playfair Display
 - NextAuth credentials for `/admin`
-- Prisma (SQLite locally) for clients, appointments, session notes, and payments
-- Placeholder checkout at `/api/checkout` for Razorpay or Stripe
+- Prisma (SQLite locally) for clients, appointments, session notes, and booking records
+- WhatsApp-based consultation requests instead of online payment checkout
 
 ## Setup
 
@@ -33,7 +33,7 @@ Open [http://localhost:3000](http://localhost:3000). Sign in to admin at `/admin
 | `/about` | Biography |
 | `/services` | Pricing grid, retainers, Vastu, rectification |
 | `/academy` | Course directory |
-| `/book` | Timezone calendar + ₹2100 checkout UI |
+| `/book` | Timezone calendar + WhatsApp booking request form |
 | `/admin/dashboard` | Metrics |
 | `/admin/clients` | CRM + counseling notes |
 | `/admin/appointments` | Kundli vs daily counseling calendar |

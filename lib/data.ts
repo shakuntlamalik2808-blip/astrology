@@ -8,40 +8,40 @@ export const services = [
     duration: "60 minutes",
     highlighted: true,
     description:
-      "A one-hour North Indian chart reading covering dasha timing, yogas, and a written summary of priorities for the year ahead.",
+      "A focused one-hour Kundli consultation covering dasha timing, key yogas, and practical guidance for the year ahead.",
     includes: [
-      "Birth-chart interpretation (Rasi & Navamsa)",
-      "Lal Kitab remedial counsel (ethical, practical)",
+      "Birth-chart interpretation",
+      "Practical guidance for current life matters",
       "Timezone-aware live session",
-      "Follow-up notes within 48 hours",
+      "Follow-up notes shared after the reading",
     ],
   },
   {
     id: "vastu",
-    title: "Vastu Shastra Audits",
-    price: 8500,
-    duration: "Site + report",
+    title: "Home Vastu",
+    price: 50000,
+    duration: "Site consultation + detailed guidance",
     highlighted: false,
     description:
-      "Residential and studio audits with floor-plan markup, directional analysis, and staged recommendations.",
+      "A home Vastu review focused on directions, placement, and practical remedies for harmonious living spaces.",
     includes: [
-      "Plan review & site interview",
-      "Direction, entrance, and kitchen notes",
-      "Prioritized, low-disruption remedies",
+      "Home or property review",
+      "Directional guidance for key zones",
+      "Practical adjustments and remedies",
     ],
   },
   {
-    id: "rectification",
-    title: "Event-Based Birth Time Rectification",
-    price: 6200,
-    duration: "90 minutes + research",
+    id: "matchmaking",
+    title: "Match Making",
+    price: 2100,
+    duration: "Consultation-based review",
     highlighted: false,
     description:
-      "When the recorded time is uncertain, we reconstruct a working birth time from documented life events.",
+      "A compatibility-focused reading for relationship matches, with attention to chart patterns and timing considerations.",
     includes: [
-      "Event questionnaire",
-      "Multiple chart hypotheses",
-      "Working time for future consultations",
+      "Matching overview",
+      "Compatibility insights",
+      "Relationship guidance and timing notes",
     ],
   },
 ];
@@ -70,7 +70,7 @@ export const retainers = [
 export const courses = [
   {
     slug: "north-indian-foundations",
-    title: "North Indian Chart Foundations",
+    title: " Chart Foundations",
     startsAt: "2026-10-12",
     durationWeeks: 8,
     priceInr: 18000,
@@ -144,7 +144,7 @@ export const mockClients = [
     birthTime: "14:08",
     birthPlace: "Chennai, Tamil Nadu",
     vastuFloorPlan: "Studio apartment; desk facing north; entrance west.",
-    notes: ["Academy enrollment: North Indian Chart Foundations."],
+    notes: ["Academy enrollment:  Chart Foundations."],
   },
 ];
 

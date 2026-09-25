@@ -6,21 +6,21 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 const features = [
   {
     icon: Compass,
-    title: "Consultations",
+    title: "Single Kundli Consultation",
     href: "/services",
-    body: "Sixty-minute Kundli readings that combine North Indian chart craft with counseling-grade listening.",
+    body: "A sixty-minute consultation for chart guidance, timing insight, and practical life direction.",
   },
   {
     icon: Sparkles,
-    title: "Daily Counseling",
+    title: "Home Vastu",
     href: "/services",
-    body: "Short, recurring 15-minute check-ins for clients who need cadence during a dasha, move, or family season.",
+    body: "Guidance for home or property direction, placement, and practical remedies to create harmony.",
   },
   {
     icon: BookOpen,
-    title: "Academy",
-    href: "/academy",
-    body: "Cohort courses for students and practitioners who want academic rigor without the jargon fog.",
+    title: "Match Making",
+    href: "/services",
+    body: "Compatibility-focused chart review for relationship understanding and timing-aware guidance.",
   },
 ];
 
@@ -36,7 +36,7 @@ export default function HomePage() {
               Astrology as a counseling practice, not a spectacle.
             </h1>
             <p className="mt-6 max-w-xl text-lg text-ivory/75">
-              Shakuntla Malik reads North Indian charts with the discipline of a clinician: clear language, ethical
+              Shakuntla Malik reads  charts with the discipline of a clinician: clear language, ethical
               remedies, and timing that respects your timezone and your life.
             </p>
             <div className="mt-8 flex flex-wrap gap-3">
@@ -56,7 +56,7 @@ export default function HomePage() {
                 fatalism.
               </li>
               <li>
-                <strong className="text-ivory">North Indian interpretation.</strong> Diamond-chart literacy with Navamsa
+                <strong className="text-ivory"> interpretation.</strong> Diamond-chart literacy with Navamsa
                 and dasha sequencing.
               </li>
               <li>
@@ -73,7 +73,7 @@ export default function HomePage() {
           <div className="gold-rule mx-auto" />
           <h2 className="mt-6 font-serif text-3xl md:text-4xl">How the work is offered</h2>
           <p className="mt-3 text-muted-foreground">
-            Three doors into the same practice: a single reading, an ongoing retainer, or a classroom.
+            Three core offerings designed for clarity, guidance, and practical life decisions.
           </p>
         </div>
         <div className="mt-12 grid gap-6 md:grid-cols-3">
