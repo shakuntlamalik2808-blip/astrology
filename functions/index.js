@@ -15,7 +15,7 @@ const ADMIN_NUMBER = "919811840795";
 
 function buildMessage(c) {
   return [
-    "New Website Consultation Request",
+    c.source === "admin" ? "New Manual Consultation" : "New Website Consultation Request",
     "",
     `Name: ${c.fullName}`,
     `WhatsApp: ${c.whatsappNumber}`,
@@ -31,8 +31,8 @@ function buildMessage(c) {
     "Message:",
     c.additionalMessage || "—",
     "",
-    "Source: Website",
-    "Status: New",
+    `Source: ${c.source === "admin" ? "Admin" : "Website"}`,
+    `Status: ${c.status || "New"}`,
     `Reference: ${c.consultationId}`,
   ].join("\n");
 }
@@ -55,7 +55,7 @@ async function upsertCustomer(c) {
     timeOfBirth: c.timeOfBirth || "",
     placeOfBirth: c.placeOfBirth,
     currentCity: c.currentCity,
-    source: "website",
+    source: c.source || "website",
     consultationIds: [c.consultationId],
     createdAt: FieldValue.serverTimestamp(),
     updatedAt: FieldValue.serverTimestamp(),
@@ -75,6 +75,9 @@ exports.onConsultationCreated = onDocumentCreated(
     } catch (e) {
       console.error("customer upsert failed", e);
     }
+
+    // Manual entries are already visible to the owner who created them.
+    if (c.source === "admin") return;
 
     const message = buildMessage(c);
     const notifRef = db.collection("notifications").doc();

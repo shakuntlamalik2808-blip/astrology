@@ -38,11 +38,11 @@ function Index() {
       <PracticePillars />
       <Services />
       <ConsultationJourney />
-      <About />
-      <Academy />
-      <Trust />
-      <BookingCTA />
-      <Footer />
+      <div className="defer-render"><About /></div>
+      <div className="defer-render"><Academy /></div>
+      <div className="defer-render"><Trust /></div>
+      <div className="defer-render"><BookingCTA /></div>
+      <div className="defer-render"><Footer /></div>
     </main>
   );
 }

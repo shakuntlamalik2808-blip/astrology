@@ -2,7 +2,7 @@ import { motion, useScroll, useTransform, useReducedMotion } from "motion/react"
 import { useRef } from "react";
 import { Reveal, RevealWords } from "./Reveal";
 import { MagneticButton } from "./MagneticButton";
-import portrait from "@/assets/about-portrait.jpg";
+import portrait from "@/assets/about-portrait.webp";
 
 export function About() {
   const ref = useRef<HTMLDivElement>(null);
@@ -19,6 +19,7 @@ export function About() {
               src={portrait}
               alt="Abstract portrait placeholder representing the practice"
               loading="lazy"
+              decoding="async"
               width={1008}
               height={1264}
               style={reduced ? {} : { y }}

@@ -1,12 +1,5 @@
-import {
-  collection,
-  doc,
-  serverTimestamp,
-  setDoc,
-  type Timestamp,
-} from "firebase/firestore";
+import type { Timestamp } from "firebase/firestore";
 import { z } from "zod";
-import { getFirebaseDb } from "./firebase";
 
 export const CONSULTATION_TYPES = [
   "Kundli Consultation",
@@ -77,7 +70,7 @@ export type Consultation = {
   updatedAt?: Timestamp;
 };
 
-function makeRefId() {
+export function makeConsultationId() {
   const d = new Date();
   const ymd = `${d.getFullYear()}${String(d.getMonth() + 1).padStart(2, "0")}${String(d.getDate()).padStart(2, "0")}`;
   const rand = Array.from(crypto.getRandomValues(new Uint8Array(3)))
@@ -100,7 +93,11 @@ export async function submitConsultation(data: ConsultationData): Promise<string
     /* ignore */
   }
 
-  const id = makeRefId();
+  const id = makeConsultationId();
+  const [{ collection, doc, serverTimestamp, setDoc }, { getFirebaseDb }] = await Promise.all([
+    import("firebase/firestore"),
+    import("./firebase"),
+  ]);
   const db = getFirebaseDb();
   await setDoc(doc(collection(db, "consultations"), id), {
     consultationId: id,

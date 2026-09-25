@@ -13,7 +13,7 @@ import {
   submitConsultation,
   type ConsultationInput,
 } from "@/lib/consultations";
-import { isFirebaseConfigured } from "@/lib/firebase";
+import { isFirebaseConfigured } from "@/lib/firebase-config";
 
 const title = "Book a Consultation — Shakuntla Malik";
 const description =
