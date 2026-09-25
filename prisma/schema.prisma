@@ -7,36 +7,6 @@ datasource db {
   url      = env("DATABASE_URL")
 }
 
-enum Role {
-  ADMIN
-}
-
-enum AppointmentType {
-  KUNDLI
-  DAILY_COUNSELING
-}
-
-enum AppointmentStatus {
-  SCHEDULED
-  COMPLETED
-  CANCELLED
-  NO_SHOW
-}
-
-enum PaymentStatus {
-  PENDING
-  SUCCEEDED
-  FAILED
-  REFUNDED
-}
-
-enum PaymentKind {
-  SINGLE_CONSULTATION
-  DAILY_RETAINER
-  COURSE
-  VASTU_AUDIT
-}
-
 model User {
   id            String    @id @default(cuid())
   name          String?
@@ -44,7 +14,7 @@ model User {
   emailVerified DateTime?
   image         String?
   passwordHash  String?
-  role          Role      @default(ADMIN)
+  role          String    @default("ADMIN")
   createdAt     DateTime  @default(now())
   updatedAt     DateTime  @updatedAt
 }
@@ -74,8 +44,8 @@ model Appointment {
   id        String            @id @default(cuid())
   clientId  String
   client    Client            @relation(fields: [clientId], references: [id], onDelete: Cascade)
-  type      AppointmentType
-  status    AppointmentStatus @default(SCHEDULED)
+  type      String
+  status    String            @default("SCHEDULED")
   startsAt  DateTime
   durationMin Int
   timezone  String            @default("Asia/Kolkata")
@@ -111,8 +81,8 @@ model Payment {
   appointment   Appointment?  @relation(fields: [appointmentId], references: [id], onDelete: SetNull)
   amountInr     Int
   currency      String        @default("INR")
-  kind          PaymentKind
-  status        PaymentStatus @default(PENDING)
+  kind          String
+  status        String        @default("PENDING")
   provider      String?
   providerRef   String?
   createdAt     DateTime      @default(now())
