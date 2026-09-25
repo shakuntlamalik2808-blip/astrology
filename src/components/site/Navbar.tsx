@@ -40,15 +40,15 @@ export function Navbar() {
             : "border-b border-ivory/8 py-5",
         )}
       >
-        <nav className="mx-auto flex max-w-[88rem] items-center justify-between px-6 lg:px-12">
-          <a href="/#top" className="group flex items-baseline gap-3">
+        <nav className="mx-auto grid max-w-[88rem] grid-cols-[minmax(0,1fr)_auto] items-center gap-3 px-4 sm:px-6 lg:flex lg:justify-between lg:px-12">
+          <a href="/#top" className="group flex min-w-0 items-baseline gap-3">
             <span
               className={cn(
                  "display transition-all duration-300",
-                scrolled ? "text-xl" : "text-2xl",
+                scrolled ? "text-lg sm:text-xl" : "text-xl sm:text-2xl",
               )}
             >
-              Shakuntla Malik
+              <span className="block truncate">Shakuntla Malik</span>
             </span>
             <span className="eyebrow hidden text-gold/80 sm:inline">Jyotish</span>
           </a>
@@ -67,7 +67,7 @@ export function Navbar() {
             ))}
           </ul>
 
-          <div className="flex items-center gap-3">
+          <div className="flex shrink-0 items-center gap-3">
             <div className="hidden lg:block">
               <MagneticButton href="/book-consultation" variant="gold" className="px-6 py-3">
                 Book a Consultation
@@ -95,8 +95,8 @@ export function Navbar() {
             transition={{ duration: 0.4 }}
             className="surface-night fixed inset-0 z-60 flex flex-col px-6 py-6 lg:hidden"
           >
-            <div className="flex items-center justify-between">
-              <span className="display text-2xl text-ivory">Shakuntla Malik</span>
+            <div className="grid grid-cols-[minmax(0,1fr)_auto] items-center gap-4">
+              <span className="display min-w-0 truncate text-xl text-ivory sm:text-2xl">Shakuntla Malik</span>
               <button
                 type="button"
                 aria-label="Close menu"
@@ -117,7 +117,7 @@ export function Navbar() {
                   <a
                     href={l.href}
                     onClick={() => setOpen(false)}
-                    className="display block border-b border-ivory/10 py-4 text-4xl text-ivory"
+                    className="display block border-b border-ivory/10 py-4 text-3xl text-ivory sm:text-4xl"
                   >
                     {l.label}
                   </a>

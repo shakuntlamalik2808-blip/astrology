@@ -47,7 +47,7 @@ export function MagneticButton({ children, href = "/book-consultation", variant 
       style={{ x: sx, y: sy }}
       whileTap={{ scale: 0.97 }}
       className={cn(
-        "group relative inline-flex min-h-12 items-center justify-center gap-3 rounded-sm px-7 py-3.5 text-[0.76rem] font-medium tracking-[0.14em] uppercase transition-colors duration-200",
+        "group relative inline-flex min-h-12 max-w-full items-center justify-center gap-3 rounded-sm px-5 py-3.5 text-center text-[0.72rem] font-medium tracking-[0.14em] uppercase transition-colors duration-200 sm:px-7 sm:text-[0.76rem]",
         "focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-gold",
         variants[variant],
         className,

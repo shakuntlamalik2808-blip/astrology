@@ -25,7 +25,7 @@ export function About() {
               className="h-full w-full scale-110 object-cover"
             />
           </div>
-           <span className="pointer-events-none absolute -right-5 -bottom-5 h-24 w-24 border-r border-b border-gold/55" />
+            <span className="pointer-events-none absolute right-0 -bottom-5 h-24 w-24 border-r border-b border-gold/55 sm:-right-5" />
         </div>
 
         <div className="lg:col-span-6 lg:col-start-7 lg:pt-10">

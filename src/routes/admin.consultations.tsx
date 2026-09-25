@@ -46,8 +46,8 @@ function ConsultationsPage() {
     <div>
       <h1 className="display text-3xl">Consultations</h1>
       {error && <p className="mt-4 text-sm text-destructive">{error}</p>}
-      <div className="mt-6 flex flex-wrap gap-3">
-        <input placeholder="Search name, email, phone, ID…" value={q} onChange={(e) => setQ(e.target.value)} className={`${sel} min-w-60 flex-1`} />
+      <div className="mt-6 grid gap-3 sm:grid-cols-2 xl:grid-cols-[minmax(14rem,1fr)_auto_auto_auto_auto]">
+        <input placeholder="Search name, email, phone, ID…" value={q} onChange={(e) => setQ(e.target.value)} className={`${sel} min-w-0 sm:col-span-2 xl:col-span-1`} />
         <select value={status} onChange={(e) => setStatus(e.target.value)} className={sel} aria-label="Status filter">
           <option>All</option>
           {STATUSES.map((s) => <option key={s}>{s}</option>)}
@@ -61,7 +61,7 @@ function ConsultationsPage() {
           <option value="preferredDate">Preferred date</option>
           <option value="fullName">Name A–Z</option>
         </select>
-        <label className="flex items-center gap-2 text-sm">
+        <label className="flex min-h-10 items-center gap-2 text-sm">
           <input type="checkbox" checked={showArchived} onChange={(e) => setShowArchived(e.target.checked)} /> Archived
         </label>
       </div>
@@ -90,7 +90,7 @@ function ConsultationsPage() {
       </div>
 
       <Dialog open={!!open} onOpenChange={(v) => !v && setOpen(null)}>
-        <DialogContent className="max-h-[90vh] overflow-y-auto sm:max-w-2xl">
+        <DialogContent className="max-h-[calc(100dvh-1rem)] w-[calc(100%-1rem)] overflow-y-auto p-4 sm:max-h-[90vh] sm:max-w-2xl sm:p-6">
           {open && <Editor row={open} onClose={() => setOpen(null)} />}
         </DialogContent>
       </Dialog>
@@ -130,7 +130,7 @@ function Editor({ row, onClose }: { row: Row; onClose: () => void }) {
         <DialogTitle className="font-display">{row.fullName}</DialogTitle>
         <p className="text-xs text-muted-foreground">{row.consultationId} · {row.source}</p>
       </DialogHeader>
-      <dl className="grid grid-cols-2 gap-x-6 gap-y-3 text-sm">
+      <dl className="grid grid-cols-1 gap-x-6 gap-y-3 text-sm sm:grid-cols-2">
         {[
           ["WhatsApp", row.whatsappNumber],
           ["Email", row.email],
@@ -141,7 +141,7 @@ function Editor({ row, onClose }: { row: Row; onClose: () => void }) {
         ].map(([k, v]) => (
           <div key={k}><dt className="text-xs text-muted-foreground">{k}</dt><dd className="break-words">{v}</dd></div>
         ))}
-        {row.additionalMessage && <div className="col-span-2"><dt className="text-xs text-muted-foreground">Message</dt><dd className="whitespace-pre-wrap">{row.additionalMessage}</dd></div>}
+        {row.additionalMessage && <div className="sm:col-span-2"><dt className="text-xs text-muted-foreground">Message</dt><dd className="whitespace-pre-wrap">{row.additionalMessage}</dd></div>}
       </dl>
       <div className="grid gap-4 border-t border-border pt-4 sm:grid-cols-2">
         <label className="text-xs text-muted-foreground">Status
@@ -165,8 +165,8 @@ function Editor({ row, onClose }: { row: Row; onClose: () => void }) {
         </label>
       </div>
       {err && <p className="text-sm text-destructive">{err}</p>}
-      <div className="flex flex-wrap justify-between gap-3">
-        <div className="flex gap-2">
+      <div className="flex flex-col gap-3 sm:flex-row sm:flex-wrap sm:justify-between">
+        <div className="grid grid-cols-2 gap-2 sm:flex">
           <button disabled={busy} onClick={() => run(() => updateDoc(ref, { archived: !row.archived, updatedAt: serverTimestamp() }))} className="h-10 rounded-sm border border-border px-4 text-sm hover:bg-muted">
             {row.archived ? "Unarchive" : "Archive"}
           </button>

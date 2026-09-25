@@ -26,7 +26,7 @@ export function Footer() {
             </address>
             <a
               href="mailto:hello@shakuntlamalik.example"
-              className="mt-6 inline-block text-sm text-ivory/80 underline decoration-gold/40 underline-offset-8 transition-colors hover:text-gold"
+              className="mt-6 inline-block break-all text-sm text-ivory/80 underline decoration-gold/40 underline-offset-8 transition-colors hover:text-gold"
             >
               hello@shakuntlamalik.example
             </a>

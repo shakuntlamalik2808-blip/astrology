@@ -18,10 +18,10 @@ export function ConsultationJourney() {
           </h2>
         </Reveal>
 
-        <ol className="mt-16 grid border-t border-border lg:grid-cols-4">
+        <ol className="mt-16 grid border-t border-border md:grid-cols-2 lg:grid-cols-4">
           {steps.map((s, i) => (
             <Reveal as="li" key={s.n} delay={i * 0.1}>
-               <div className="group relative h-full border-b border-border bg-background/40 p-8 transition-colors duration-200 hover:bg-background lg:border-r lg:p-9">
+               <div className="group relative h-full border-b border-border bg-background/40 p-8 transition-colors duration-200 hover:bg-background md:border-r lg:p-9">
                  <span className="absolute top-0 left-0 h-px w-0 bg-gold transition-all duration-300 group-hover:w-full" />
                  <span className="display block text-4xl text-gold/70 transition-colors duration-200 group-hover:text-gold">
                   {s.n}

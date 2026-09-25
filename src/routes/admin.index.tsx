@@ -29,8 +29,8 @@ function Dashboard() {
       <h2 className="mt-12 font-display text-xl">Latest requests</h2>
       <div className="mt-4 divide-y divide-border rounded-sm border border-border bg-card">
         {active.slice(0, 5).map((r) => (
-          <div key={r.id} className="flex flex-wrap items-center justify-between gap-3 px-5 py-4">
-            <div>
+          <div key={r.id} className="flex flex-col items-start gap-3 px-4 py-4 sm:flex-row sm:items-center sm:justify-between sm:px-5">
+            <div className="min-w-0">
               <p className="font-medium">{r.fullName}</p>
               <p className="text-sm text-muted-foreground">{r.consultationType} · {formatDate(r.preferredDate)} · {formatTime(r.preferredTime)}</p>
             </div>

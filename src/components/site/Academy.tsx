@@ -47,7 +47,7 @@ export function Academy() {
         <ol className="lg:col-span-6 lg:col-start-7">
           {modules.map((m, i) => (
             <Reveal as="li" key={m.title} delay={i * 0.08}>
-              <div className="group flex gap-8 border-b border-ivory/12 py-8">
+              <div className="group flex gap-4 border-b border-ivory/12 py-8 sm:gap-8">
                 <span className="eyebrow pt-2 text-gold/70">0{i + 1}</span>
                 <div>
                    <h3 className="display text-2xl text-ivory transition-transform duration-200 group-hover:translate-x-1 lg:text-3xl">

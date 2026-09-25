@@ -16,11 +16,11 @@ function NotificationsPage() {
       <div className="mt-6 space-y-3">
         {rows?.map((n) => (
           <details key={n.id} className="rounded-sm border border-border bg-card px-5 py-4">
-            <summary className="flex cursor-pointer flex-wrap items-center justify-between gap-3">
-              <span className="text-sm"><span className="font-medium">{n.consultationId}</span> → {n.recipient}</span>
-              <span className="flex items-center gap-3 text-xs text-muted-foreground">{tsToString(n.createdAt)} <StatusBadge status={n.status} /></span>
+            <summary className="flex cursor-pointer flex-col items-start gap-3 sm:flex-row sm:items-center sm:justify-between">
+              <span className="min-w-0 break-all text-sm"><span className="font-medium">{n.consultationId}</span> → {n.recipient}</span>
+              <span className="flex shrink-0 flex-wrap items-center gap-3 text-xs text-muted-foreground">{tsToString(n.createdAt)} <StatusBadge status={n.status} /></span>
             </summary>
-            <pre className="mt-3 whitespace-pre-wrap font-sans text-sm text-muted-foreground">{n.message}</pre>
+            <pre className="mt-3 overflow-x-auto whitespace-pre-wrap break-words font-sans text-sm text-muted-foreground">{n.message}</pre>
             {n.sentAt && <p className="mt-2 text-xs">Sent: {tsToString(n.sentAt)}</p>}
             {n.error && <p className="mt-2 text-xs text-destructive">Error: {n.error}</p>}
           </details>

@@ -18,7 +18,7 @@ export function Hero() {
     <section
       id="top"
       ref={ref}
-      className="surface-night grain relative flex min-h-[92svh] items-center overflow-hidden pt-24"
+      className="surface-night grain relative flex min-h-[92svh] items-start overflow-hidden pt-20 sm:items-center sm:pt-24"
     >
       <motion.img
         src={heroCosmos}
@@ -36,7 +36,7 @@ export function Hero() {
 
       <motion.div
         style={reduced ? {} : { y: textY, opacity: fade }}
-        className="relative mx-auto w-full max-w-5xl px-6 py-24 text-center lg:px-12"
+        className="relative mx-auto w-full max-w-5xl px-5 py-14 text-center sm:px-6 sm:py-20 lg:px-12 lg:py-24"
       >
         <motion.p
           initial={{ opacity: 0, y: 14 }}
@@ -47,8 +47,8 @@ export function Hero() {
           Jyotish • Counseling • Guidance
         </motion.p>
 
-        <p className="display mt-7 text-[clamp(1.65rem,3vw,2.5rem)] italic text-ivory/92">Shakuntla Malik</p>
-         <h1 className="display mx-auto mt-7 max-w-5xl text-[clamp(2.8rem,7.4vw,6.6rem)] text-ivory">
+        <p className="display mt-5 text-[clamp(1.4rem,3vw,2.5rem)] italic text-ivory/92 sm:mt-7">Shakuntla Malik</p>
+         <h1 className="display mx-auto mt-5 max-w-5xl text-[clamp(2.35rem,7.4vw,6.6rem)] text-ivory sm:mt-7">
           {headline.map((line, i) => (
             <span key={line} className="block overflow-hidden">
               <motion.span
@@ -63,12 +63,12 @@ export function Hero() {
           ))}
         </h1>
 
-         <div className="mx-auto mt-10 flex max-w-2xl flex-col items-center gap-8 border-t border-ivory/15 pt-8">
+         <div className="mx-auto mt-7 flex max-w-2xl flex-col items-center gap-6 border-t border-ivory/15 pt-6 sm:mt-10 sm:gap-8 sm:pt-8">
           <motion.p
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
              transition={{ delay: 0.7, duration: 0.72 }}
-             className="max-w-2xl text-base leading-relaxed text-ivory/72 lg:text-lg"
+             className="max-w-2xl text-sm leading-relaxed text-ivory/72 sm:text-base lg:text-lg"
           >
             Astrology approached as a counseling practice — grounded in insight, timing and
             practical guidance rather than fear or fatalism. Kundli, Lal Kitab and Vastu read
@@ -79,7 +79,7 @@ export function Hero() {
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
              transition={{ delay: 0.82, duration: 0.72 }}
-             className="flex flex-wrap items-center justify-center gap-4 text-ivory"
+             className="grid w-full gap-3 text-ivory sm:flex sm:flex-wrap sm:items-center sm:justify-center sm:gap-4"
           >
             <MagneticButton href="/book-consultation" variant="gold">
               Book a Consultation

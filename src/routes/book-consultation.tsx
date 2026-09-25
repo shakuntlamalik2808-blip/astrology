@@ -105,9 +105,9 @@ function BookPage() {
   return (
     <main className="relative">
       <Navbar />
-      <section className="surface-night relative overflow-hidden pb-24 pt-36 text-ivory md:pb-32 md:pt-44">
+      <section className="surface-night relative overflow-hidden pb-20 pt-28 text-ivory sm:pb-24 sm:pt-36 md:pb-32 md:pt-44">
         <Starfield count={40} />
-        <div className="relative mx-auto max-w-3xl px-6">
+        <div className="relative mx-auto max-w-3xl px-4 sm:px-6">
           <AnimatePresence mode="wait">
             {done ? (
               <motion.div key="done" {...fade} className="text-center">
@@ -127,7 +127,7 @@ function BookPage() {
                   ].map(([k, v]) => (
                     <div key={k} className="bg-ink px-5 py-4">
                       <dt className="text-[0.7rem] uppercase tracking-[0.16em] text-ivory/50">{k}</dt>
-                      <dd className="mt-1 font-display text-ivory">{v}</dd>
+                      <dd className="mt-1 break-words font-display text-ivory">{v}</dd>
                     </div>
                   ))}
                 </dl>
@@ -143,8 +143,8 @@ function BookPage() {
             ) : (
               <motion.div key="form" {...fade}>
                 <p className="eyebrow text-gold">Book a Consultation</p>
-                <h1 className="display mt-6 text-4xl leading-tight md:text-6xl">Let's begin your journey toward clarity.</h1>
-                <p className="mt-6 max-w-xl text-lg text-ivory/70">
+                <h1 className="display mt-5 text-[2.35rem] leading-tight sm:mt-6 sm:text-5xl md:text-6xl">Let's begin your journey toward clarity.</h1>
+                <p className="mt-5 max-w-xl text-base leading-relaxed text-ivory/70 sm:mt-6 sm:text-lg">
                   Share a few details with us and we'll get back to you regarding your consultation.
                 </p>
 
@@ -154,15 +154,15 @@ function BookPage() {
                   initial={reduced ? false : { opacity: 0, y: 24 }}
                   animate={{ opacity: 1, y: 0 }}
                   transition={{ duration: 0.85, delay: 0.15, ease: [0.22, 1, 0.36, 1] }}
-                  className="mt-14 rounded-sm border border-ivory/12 bg-ink-soft/60 p-6 backdrop-blur-sm md:p-10"
+                  className="mt-10 rounded-sm border border-ivory/12 bg-ink-soft/60 p-4 backdrop-blur-sm sm:mt-14 sm:p-6 md:p-10"
                 >
                   <Group title="Personal information">
                     <Field id="fullName" label="Full name" error={errors.fullName} full>
                       <input id="f-fullName" autoComplete="name" value={values.fullName} onChange={(e) => set("fullName")(e.target.value)} className={inputCls} />
                     </Field>
                     <Field id="phone" label="WhatsApp number" error={errors.phone}>
-                      <div className="flex gap-2">
-                        <select aria-label="Country code" value={values.countryCode} onChange={(e) => set("countryCode")(e.target.value)} className={`${inputCls} !w-32 shrink-0 px-3`}>
+                      <div className="grid grid-cols-[minmax(0,0.9fr)_minmax(0,1.1fr)] gap-2 sm:grid-cols-[8rem_minmax(0,1fr)]">
+                        <select aria-label="Country code" value={values.countryCode} onChange={(e) => set("countryCode")(e.target.value)} className={`${inputCls} min-w-0 px-2 sm:px-3`}>
                           {COUNTRY_CODES.map((c) => (
                             <option key={c.code} value={c.code} className="bg-ink">{c.label}</option>
                           ))}
@@ -247,9 +247,9 @@ function Group({ title, children }: { title: string; children: ReactNode }) {
 function Field({ id, label, error, hint, full, children }: { id: string; label: string; error?: string | undefined; hint?: string; full?: boolean; children: ReactNode }) {
   return (
     <div className={full ? "md:col-span-2" : undefined}>
-      <label htmlFor={`f-${id}`} className="mb-2 flex items-baseline justify-between text-[0.72rem] uppercase tracking-[0.14em] text-ivory/70">
+      <label htmlFor={`f-${id}`} className="mb-2 grid grid-cols-[minmax(0,1fr)_auto] items-baseline gap-2 text-[0.75rem] uppercase tracking-[0.08em] text-ivory/70 sm:text-[0.78rem]">
         {label}
-        {hint && <span className="normal-case tracking-normal text-ivory/40">{hint}</span>}
+        {hint && <span className="text-right normal-case tracking-normal text-ivory/40">{hint}</span>}
       </label>
       {children}
       {error && <p className="mt-2 text-sm text-gold-soft" role="alert">{error}</p>}

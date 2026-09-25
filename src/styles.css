@@ -129,11 +129,14 @@
 
   html {
     scroll-behavior: smooth;
+    overflow-x: clip;
   }
 
   body {
     background-color: var(--color-background);
     color: var(--color-foreground);
+    min-width: 0;
+    overflow-x: clip;
     font-family: var(--font-sans);
     font-synthesis-weight: none;
     -webkit-font-smoothing: antialiased;
@@ -185,7 +188,7 @@
 }
 
 @utility editorial-section {
-  padding-block: clamp(6rem, 10vw, 10rem);
+  padding-block: clamp(4.5rem, 10vw, 10rem);
 }
 
 @utility hairline {

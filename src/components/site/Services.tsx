@@ -56,16 +56,17 @@ export function Services() {
                 <Reveal as="li" key={s.id} delay={i * 0.08}>
                   <div
                     onMouseEnter={() => setActive(i)}
+                    onClick={() => setActive(i)}
                     className={cn(
-                       "group border-b border-border py-8 transition-colors duration-200 lg:py-10",
+                       "group cursor-pointer border-b border-border py-8 transition-colors duration-200 lg:py-10",
                       active === i && "bg-secondary/40",
                     )}
                   >
-                    <div className="flex flex-wrap items-baseline justify-between gap-x-6 gap-y-2 px-2 lg:px-6">
-                      <h3 className="display text-3xl lg:text-[2.75rem]">{s.title}</h3>
-                      <p className="display text-xl text-gold lg:text-2xl">
+                    <div className="grid grid-cols-1 gap-2 px-2 sm:grid-cols-[minmax(0,1fr)_auto] sm:items-baseline sm:gap-x-6 lg:px-6">
+                      <h3 className="display min-w-0 text-2xl sm:text-3xl lg:text-[2.75rem]">{s.title}</h3>
+                      <p className="display text-xl text-gold sm:text-right lg:text-2xl">
                         {s.price}
-                        <span className="ml-3 align-middle font-sans text-[0.62rem] tracking-[0.18em] text-muted-foreground uppercase">
+                        <span className="ml-3 inline-block align-middle font-sans text-[0.62rem] tracking-[0.18em] text-muted-foreground uppercase">
                           {s.duration}
                         </span>
                       </p>
@@ -87,7 +88,7 @@ export function Services() {
           </div>
 
           <div className="order-1 lg:order-2 lg:col-span-5">
-             <div className="sticky top-28 aspect-[4/5] overflow-hidden rounded-sm">
+             <div className="sticky top-28 aspect-[16/10] overflow-hidden rounded-sm sm:aspect-[4/3] lg:aspect-[4/5]">
               <AnimatePresence mode="wait">
                 <motion.div
                   key={current.id}
