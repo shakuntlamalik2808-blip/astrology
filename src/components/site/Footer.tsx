@@ -25,10 +25,10 @@ export function Footer() {
               Faridabad, Haryana, India
             </address>
             <a
-              href="mailto:hello@shakuntlamalik.example"
+              href="mailto:akash.malik@successive.tech"
               className="mt-6 inline-block break-all text-sm text-ivory/80 underline decoration-gold/40 underline-offset-8 transition-colors hover:text-gold"
             >
-              hello@shakuntlamalik.example
+              akash.malik@successive.tech
             </a>
             <p className="mt-3 text-xs text-ivory/35">Placeholder contact — replace with the live address.</p>
           </div>

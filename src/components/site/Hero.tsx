@@ -2,7 +2,7 @@ import { motion, useScroll, useTransform, useReducedMotion } from "motion/react"
 import { useRef } from "react";
 import { MagneticButton } from "./MagneticButton";
 import { Starfield } from "./Starfield";
-import heroCosmos from "@/assets/hero-cosmos.jpg";
+import heroCosmos from "@/assets/hero-cosmos.webp";
 
 const headline = ["Clarity for the", "moments that matter."];
 
@@ -25,6 +25,8 @@ export function Hero() {
         alt=""
         width={1600}
         height={1200}
+        fetchPriority="high"
+        decoding="async"
         style={reduced ? {} : { y: imageY }}
         className="absolute inset-0 h-[108%] w-full scale-[1.02] object-cover opacity-48"
       />

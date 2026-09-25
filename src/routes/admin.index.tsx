@@ -4,6 +4,17 @@ import { formatDate, formatTime } from "@/lib/consultations";
 import { StatusBadge } from "@/components/admin/StatusBadge";
 
 export const Route = createFileRoute("/admin/")({
+  head: () => ({
+    meta: [
+      { title: "Dashboard — Studio" },
+      { name: "description", content: "Consultation management dashboard." },
+      { property: "og:title", content: "Dashboard — Studio" },
+      { property: "og:description", content: "Consultation management dashboard." },
+      { property: "og:type", content: "website" },
+      { name: "twitter:card", content: "summary" },
+      { name: "robots", content: "noindex, nofollow" },
+    ],
+  }),
   component: Dashboard,
 });
 

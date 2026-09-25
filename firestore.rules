@@ -1,34 +1,56 @@
 rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
+
     // Any authenticated Firebase user is an admin.
-    // Manage access from Firebase Console → Authentication → Users.
+    // Add / remove users in Firebase Console → Authentication → Users.
     function isAdmin() {
       return request.auth != null;
     }
+
     function str(v, min, max) { return v is string && v.size() >= min && v.size() <= max; }
 
+    // ── Consultations ────────────────────────────────────────────────────────
     match /consultations/{id} {
-      // Public can only CREATE a well-formed request; never read, update or delete.
-      allow create: if id == request.resource.data.consultationId
-        && request.resource.data.keys().hasOnly(['consultationId','fullName','whatsappNumber','email','dateOfBirth','timeOfBirth','placeOfBirth','currentCity','consultationType','preferredDate','preferredTime','additionalMessage','source','status','createdAt','updatedAt'])
+
+      // Authenticated admins can do everything.
+      allow read, update, delete: if isAdmin();
+
+      // Admins can create any well-formed consultation (no field restrictions).
+      allow create: if isAdmin();
+
+      // Unauthenticated visitors can only create a strictly validated request.
+      allow create: if !isAdmin()
+        && id == request.resource.data.consultationId
+        && request.resource.data.keys().hasOnly([
+             'consultationId','fullName','whatsappNumber','email',
+             'dateOfBirth','timeOfBirth','placeOfBirth','currentCity',
+             'consultationType','preferredDate','preferredTime',
+             'additionalMessage','source','status','createdAt','updatedAt'
+           ])
         && str(request.resource.data.fullName, 2, 100)
         && request.resource.data.whatsappNumber.matches('^\\+[0-9]{7,18}$')
         && request.resource.data.email.matches('^[^@\\s]+@[^@\\s]+\\.[^@\\s]+$')
         && str(request.resource.data.placeOfBirth, 2, 120)
         && str(request.resource.data.currentCity, 2, 120)
-        && request.resource.data.consultationType in ['Kundli Consultation','Vastu Consultation','Match Making','General Consultation']
+        && request.resource.data.consultationType in [
+             'Kundli Consultation','Vastu Consultation',
+             'Match Making','General Consultation'
+           ]
         && str(request.resource.data.preferredDate, 10, 10)
         && str(request.resource.data.preferredTime, 4, 8)
         && str(request.resource.data.additionalMessage, 0, 1500)
         && request.resource.data.source == 'website'
         && request.resource.data.status == 'New'
         && request.resource.data.createdAt == request.time;
-      allow read, update, delete: if isAdmin();
     }
 
-    match /customers/{id}      { allow read, write: if isAdmin(); }
-    match /notifications/{id}  { allow read: if isAdmin(); allow write: if false; }
-    match /settings/{id}       { allow read: if isAdmin(); allow write: if false; }
+    // ── Other admin-only collections ─────────────────────────────────────────
+    match /customers/{id}     { allow read, write: if isAdmin(); }
+    match /notifications/{id} { allow read: if isAdmin(); allow write: if false; }
+
+    // settings/* is seeded automatically on first login — admins need write
+    // access so the client can create the document if it doesn't exist yet.
+    match /settings/{id}      { allow read, write: if isAdmin(); }
   }
 }

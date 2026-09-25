@@ -191,6 +191,11 @@
   padding-block: clamp(4.5rem, 10vw, 10rem);
 }
 
+@utility defer-render {
+  content-visibility: auto;
+  contain-intrinsic-size: auto 900px;
+}
+
 @utility hairline {
   border-top: 1px solid color-mix(in oklab, currentColor 18%, transparent);
 }

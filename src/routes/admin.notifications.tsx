@@ -3,6 +3,17 @@ import { tsToString, useNotifications } from "@/lib/admin-data";
 import { StatusBadge } from "@/components/admin/StatusBadge";
 
 export const Route = createFileRoute("/admin/notifications")({
+  head: () => ({
+    meta: [
+      { title: "Notifications — Studio" },
+      { name: "description", content: "Consultation notification delivery history." },
+      { property: "og:title", content: "Notifications — Studio" },
+      { property: "og:description", content: "Consultation notification delivery history." },
+      { property: "og:type", content: "website" },
+      { name: "twitter:card", content: "summary" },
+      { name: "robots", content: "noindex, nofollow" },
+    ],
+  }),
   component: NotificationsPage,
 });
 

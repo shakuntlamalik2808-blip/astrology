@@ -34,6 +34,62 @@ const services = [
   },
 ];
 
+function ServiceTexture({ type }: { type: string }) {
+  const common = "fill-none stroke-current [stroke-linecap:round] [stroke-linejoin:round]";
+
+  if (type === "vastu") {
+    return (
+      <svg viewBox="0 0 420 520" className="h-full w-full" aria-hidden="true">
+        <g className={`${common} text-gold/30`} strokeWidth="1">
+          <rect x="66" y="116" width="288" height="288" />
+          <rect x="100" y="150" width="220" height="220" transform="rotate(45 210 260)" />
+          <path d="M66 212h288M66 308h288M162 116v288M258 116v288" />
+          <circle cx="210" cy="260" r="50" />
+          <path d="m210 210 50 50-50 50-50-50 50-50Z" />
+        </g>
+        <g className={`${common} text-ivory/18`} strokeWidth="0.8">
+          <path d="M210 76v368M26 260h368" />
+          <circle cx="210" cy="260" r="176" strokeDasharray="3 8" />
+        </g>
+      </svg>
+    );
+  }
+
+  if (type === "match") {
+    return (
+      <svg viewBox="0 0 420 520" className="h-full w-full" aria-hidden="true">
+        <g className={`${common} text-gold/32`} strokeWidth="1">
+          <circle cx="166" cy="255" r="105" />
+          <circle cx="254" cy="255" r="105" />
+          <path d="M210 111c46 38 74 87 74 144s-28 106-74 144c-46-38-74-87-74-144s28-106 74-144Z" />
+          <path d="m210 191 64 64-64 64-64-64 64-64Z" />
+        </g>
+        <g className={`${common} text-ivory/18`} strokeWidth="0.8">
+          <circle cx="166" cy="255" r="132" strokeDasharray="2 9" />
+          <circle cx="254" cy="255" r="132" strokeDasharray="2 9" />
+          <path d="M70 255h280" />
+        </g>
+      </svg>
+    );
+  }
+
+  return (
+    <svg viewBox="0 0 420 520" className="h-full w-full" aria-hidden="true">
+      <g className={`${common} text-gold/32`} strokeWidth="1">
+        <circle cx="210" cy="260" r="152" />
+        <circle cx="210" cy="260" r="110" />
+        <path d="M210 108v304M58 260h304M102 152l216 216M318 152 102 368" />
+        <rect x="132" y="182" width="156" height="156" transform="rotate(45 210 260)" />
+        <circle cx="210" cy="260" r="27" />
+      </g>
+      <g className={`${common} text-ivory/18`} strokeWidth="0.8">
+        <circle cx="210" cy="260" r="184" strokeDasharray="3 9" />
+        <path d="M210 64v28M210 428v28M14 260h28M378 260h28" />
+      </g>
+    </svg>
+  );
+}
+
 export function Services() {
   const [active, setActive] = useState(0);
   const current = services[active] ?? services[0];
@@ -101,10 +157,15 @@ export function Services() {
                     current.tint,
                   )}
                 >
-                   <span className="animate-slow-spin absolute -top-20 -right-20 h-80 w-80 rounded-full border border-gold/18" />
-                   <span className="eyebrow text-gold">0{active + 1} / 03</span>
-                   <p className="display mt-4 text-4xl text-ivory">{current.title}</p>
-                   <p className="display mt-2 text-2xl text-gold/90">{current.price}</p>
+                    <div className="pointer-events-none absolute inset-0 opacity-90">
+                      <ServiceTexture type={current.id} />
+                    </div>
+                    <div className="absolute inset-0 bg-gradient-to-t from-ink via-ink/48 to-transparent" />
+                    <div className="relative">
+                      <span className="eyebrow text-gold">0{active + 1} / 03</span>
+                      <p className="display mt-4 text-4xl text-ivory">{current.title}</p>
+                      <p className="display mt-2 text-2xl text-gold/90">{current.price}</p>
+                    </div>
                 </motion.div>
               </AnimatePresence>
             </div>

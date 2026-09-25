@@ -8,6 +8,7 @@ import {
   type User,
 } from "firebase/auth";
 import { getFirebaseAuth, isFirebaseConfigured } from "./firebase";
+import { ensureWhatsappSettings } from "./firestore-init";
 
 /**
  * Any user who exists in Firebase Authentication is treated as an admin.
@@ -49,8 +50,13 @@ export function useAdminAuth(): AdminState {
       return;
     }
     return onAuthStateChanged(getFirebaseAuth(), (user) => {
-      if (user) setState({ status: "admin", user });
-      else setState({ status: "signed-out" });
+      if (user) {
+        // Seed required Firestore documents on first login to a fresh database
+        ensureWhatsappSettings();
+        setState({ status: "admin", user });
+      } else {
+        setState({ status: "signed-out" });
+      }
     });
   }, []);
   return state;

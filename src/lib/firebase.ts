@@ -2,6 +2,7 @@ import { initializeApp, getApps, type FirebaseApp } from "firebase/app";
 import { getAuth, type Auth } from "firebase/auth";
 import { getFirestore, type Firestore } from "firebase/firestore";
 import { getStorage, type FirebaseStorage } from "firebase/storage";
+export { isFirebaseConfigured } from "./firebase-config";
 
 /**
  * Firebase is fully env-driven. Every value comes from VITE_FIREBASE_*
@@ -48,7 +49,8 @@ let app: FirebaseApp | undefined;
 
 export function getFirebaseApp(): FirebaseApp {
   if (!app) {
-    app = getApps().length > 0 ? getApps()[0]! : initializeApp(buildConfig());
+    const existing = getApps()[0];
+    app = existing ?? initializeApp(buildConfig());
   }
   return app;
 }
@@ -65,7 +67,3 @@ export function getFirebaseStorage(): FirebaseStorage {
   return getStorage(getFirebaseApp());
 }
 
-/** True when all required VITE_FIREBASE_* values are present. */
-export function isFirebaseConfigured(): boolean {
-  return required.every((k) => Boolean(import.meta.env[k]));
-}

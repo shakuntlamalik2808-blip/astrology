@@ -1,6 +1,6 @@
 import { Reveal } from "./Reveal";
 import { MagneticButton } from "./MagneticButton";
-import academyImg from "@/assets/academy.jpg";
+import academyImg from "@/assets/academy.webp";
 
 const modules = [
   { title: "Foundations of Jyotish", body: "Signs, houses, planets and the logic that binds them." },
@@ -36,6 +36,7 @@ export function Academy() {
                 src={academyImg}
                 alt="Brass astrological wheel beside a handwritten Vedic chart"
                 loading="lazy"
+                decoding="async"
                 width={1408}
                 height={1008}
                  className="h-64 w-full object-cover opacity-80 transition-transform duration-[1200ms] ease-[cubic-bezier(0.22,1,0.36,1)] hover:scale-[1.025]"
