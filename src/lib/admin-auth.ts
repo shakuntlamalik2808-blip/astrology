@@ -3,38 +3,31 @@ import {
   GoogleAuthProvider,
   onAuthStateChanged,
   signInWithPopup,
+  signInWithEmailAndPassword,
   signOut,
   type User,
 } from "firebase/auth";
-import { doc, getDoc } from "firebase/firestore";
-import {
-  getFirebaseAuth,
-  getFirebaseDb,
-  isFirebaseConfigured,
-} from "./firebase";
+import { getFirebaseAuth, isFirebaseConfigured } from "./firebase";
 
 /**
- * A user is an admin only if they (1) sign in with Google via Firebase
- * account AND (2) have a document at admins/{uid}. Firestore rules enforce the same
- * check server-side, so bypassing this UI grants no data access.
+ * Any user who exists in Firebase Authentication is treated as an admin.
+ * Access is controlled entirely by who you add/remove in the Firebase
+ * Console → Authentication → Users tab.
  */
-export async function isAdmin(uid: string): Promise<boolean> {
-  try {
-    const snap = await getDoc(doc(getFirebaseDb(), "admins", uid));
-    return snap.exists();
-  } catch {
-    return false;
-  }
-}
 
 export async function adminSignInWithGoogle() {
   const provider = new GoogleAuthProvider();
   provider.setCustomParameters({ prompt: "select_account" });
   const cred = await signInWithPopup(getFirebaseAuth(), provider);
-  if (!(await isAdmin(cred.user.uid))) {
-    await signOut(getFirebaseAuth());
-    throw new Error("not-admin");
-  }
+  return cred.user;
+}
+
+export async function adminSignInWithEmail(email: string, password: string) {
+  const cred = await signInWithEmailAndPassword(
+    getFirebaseAuth(),
+    email,
+    password,
+  );
   return cred.user;
 }
 
@@ -55,13 +48,9 @@ export function useAdminAuth(): AdminState {
       setState({ status: "unconfigured" });
       return;
     }
-    return onAuthStateChanged(getFirebaseAuth(), async (user) => {
-      if (!user) return setState({ status: "signed-out" });
-      if (await isAdmin(user.uid)) setState({ status: "admin", user });
-      else {
-        await signOut(getFirebaseAuth());
-        setState({ status: "signed-out" });
-      }
+    return onAuthStateChanged(getFirebaseAuth(), (user) => {
+      if (user) setState({ status: "admin", user });
+      else setState({ status: "signed-out" });
     });
   }, []);
   return state;
@@ -72,7 +61,6 @@ export function authErrorMessage(err: unknown): string {
     (err as { code?: string; message?: string })?.code ??
     (err as Error)?.message ??
     "";
-  if (code === "not-admin") return "This account does not have admin access.";
   if (
     code.includes("popup-closed-by-user") ||
     code.includes("cancelled-popup-request")
@@ -86,5 +74,16 @@ export function authErrorMessage(err: unknown): string {
     return "Too many attempts. Please wait a few minutes and try again.";
   if (code.includes("network"))
     return "Network error. Check your connection and try again.";
+  if (
+    code.includes("wrong-password") ||
+    code.includes("invalid-credential")
+  )
+    return "Incorrect email or password. Please try again.";
+  if (code.includes("user-not-found"))
+    return "No account found with this email address.";
+  if (code.includes("invalid-email"))
+    return "Please enter a valid email address.";
+  if (code.includes("user-disabled"))
+    return "This account has been disabled.";
   return "Sign-in failed. Please try again.";
 }

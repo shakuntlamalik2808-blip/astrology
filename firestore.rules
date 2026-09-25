@@ -1,17 +1,12 @@
 rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
+    // Any authenticated Firebase user is an admin.
+    // Manage access from Firebase Console → Authentication → Users.
     function isAdmin() {
-      return request.auth != null
-        && exists(/databases/$(database)/documents/admins/$(request.auth.uid));
+      return request.auth != null;
     }
     function str(v, min, max) { return v is string && v.size() >= min && v.size() <= max; }
-
-    // Admin allowlist — create docs manually in the Firebase console (doc id = user UID).
-    match /admins/{uid} {
-      allow read: if request.auth != null && request.auth.uid == uid;
-      allow write: if false;
-    }
 
     match /consultations/{id} {
       // Public can only CREATE a well-formed request; never read, update or delete.
