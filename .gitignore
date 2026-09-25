@@ -42,3 +42,4 @@ ui-debug.log
 # Cache
 .eslintcache
 .cache/
+package-lock.json
