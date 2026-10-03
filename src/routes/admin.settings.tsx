@@ -1,5 +1,5 @@
 import { createFileRoute } from "@tanstack/react-router";
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { RotateCcw, Save } from "lucide-react";
 import { doc, getDoc, serverTimestamp, setDoc } from "firebase/firestore";
 import { getDownloadURL, ref, uploadBytes } from "firebase/storage";
@@ -131,7 +131,13 @@ function WebsiteSettingsPage() {
       updateField(key, await getDownloadURL(imageRef));
       setFeedback({ type: "success", message: "Image uploaded. Save Changes to publish it on the website." });
     } catch (error) {
-      setFeedback({ type: "error", message: error instanceof Error ? error.message : "Could not upload image." });
+      const code = (error as { code?: string })?.code;
+      const message = code === "storage/unauthorized"
+        ? "Firebase Storage denied this upload. Deploy the project's storage.rules, then try again."
+        : code === "storage/bucket-not-found"
+          ? "The Firebase Storage bucket was not found. Check the Storage bucket configured for this Firebase project."
+          : error instanceof Error ? error.message : "Could not upload image.";
+      setFeedback({ type: "error", message });
     } finally {
       setUploading(null);
     }
@@ -275,22 +281,10 @@ function WebsiteSettingsPage() {
         <section className="rounded-sm border border-[#d7c2a6] bg-[#f7f2e8] p-5 text-[#171512] shadow-sm">
           <h2 className="font-display text-xl text-[#171512]">Media & Branding</h2>
           <div className="mt-4 grid gap-4 md:grid-cols-2">
-            <Field label="Logo URL">
-              <input value={settings.logoUrl} onChange={(e) => updateField("logoUrl", e.target.value)} className="w-full rounded-sm border border-[#d7c2a6] bg-white/80 px-3 py-2.5 text-sm text-[#171512] outline-none placeholder:text-[#6d655f] focus:border-[#c79f5b]" />
-              <ImageUpload field="logoUrl" uploading={uploading === "logoUrl"} onChoose={(file) => void uploadImage("logoUrl", file)} />
-            </Field>
-            <Field label="Hero Image URL">
-              <input value={settings.heroImageUrl} onChange={(e) => updateField("heroImageUrl", e.target.value)} className="w-full rounded-sm border border-[#d7c2a6] bg-white/80 px-3 py-2.5 text-sm text-[#171512] outline-none placeholder:text-[#6d655f] focus:border-[#c79f5b]" />
-              <ImageUpload field="heroImageUrl" uploading={uploading === "heroImageUrl"} onChoose={(file) => void uploadImage("heroImageUrl", file)} />
-            </Field>
-            <Field label="Service Image URL">
-              <input value={settings.serviceImageUrl} onChange={(e) => updateField("serviceImageUrl", e.target.value)} className="w-full rounded-sm border border-[#d7c2a6] bg-white/80 px-3 py-2.5 text-sm text-[#171512] outline-none placeholder:text-[#6d655f] focus:border-[#c79f5b]" />
-              <ImageUpload field="serviceImageUrl" uploading={uploading === "serviceImageUrl"} onChoose={(file) => void uploadImage("serviceImageUrl", file)} />
-            </Field>
-            <Field label="About Image URL">
-              <input value={settings.aboutImageUrl} onChange={(e) => updateField("aboutImageUrl", e.target.value)} className="w-full rounded-sm border border-[#d7c2a6] bg-white/80 px-3 py-2.5 text-sm text-[#171512] outline-none placeholder:text-[#6d655f] focus:border-[#c79f5b]" />
-              <ImageUpload field="aboutImageUrl" uploading={uploading === "aboutImageUrl"} onChoose={(file) => void uploadImage("aboutImageUrl", file)} />
-            </Field>
+            <ImageField label="Logo URL" field="logoUrl" value={settings.logoUrl} uploading={uploading === "logoUrl"} onChange={(value) => updateField("logoUrl", value)} onChoose={(file) => void uploadImage("logoUrl", file)} />
+            <ImageField label="Hero Image URL" field="heroImageUrl" value={settings.heroImageUrl} uploading={uploading === "heroImageUrl"} onChange={(value) => updateField("heroImageUrl", value)} onChoose={(file) => void uploadImage("heroImageUrl", file)} />
+            <ImageField label="Service Image URL" field="serviceImageUrl" value={settings.serviceImageUrl} uploading={uploading === "serviceImageUrl"} onChange={(value) => updateField("serviceImageUrl", value)} onChoose={(file) => void uploadImage("serviceImageUrl", file)} />
+            <ImageField label="About Image URL" field="aboutImageUrl" value={settings.aboutImageUrl} uploading={uploading === "aboutImageUrl"} onChange={(value) => updateField("aboutImageUrl", value)} onChoose={(file) => void uploadImage("aboutImageUrl", file)} />
           </div>
         </section>
 
@@ -322,11 +316,26 @@ function Field({ label, children }: { label: string; children: React.ReactNode }
   );
 }
 
-function ImageUpload({ field, uploading, onChoose }: { field: string; uploading: boolean; onChoose: (file?: File) => void }) {
+function ImageField({ label, field, value, uploading, onChange, onChoose }: { label: string; field: "logoUrl" | "heroImageUrl" | "serviceImageUrl" | "aboutImageUrl"; value: string; uploading: boolean; onChange: (value: string) => void; onChoose: (file?: File) => void }) {
+  const inputId = `image-url-${field}`;
   return (
-    <span className="mt-2 flex flex-wrap items-center gap-3">
-      <input type="file" accept="image/*" aria-label={`Upload ${field}`} disabled={uploading} onChange={(event) => { onChoose(event.currentTarget.files?.[0]); event.currentTarget.value = ""; }} className="max-w-full text-xs file:mr-3 file:rounded-sm file:border file:border-[#d7c2a6] file:bg-white file:px-3 file:py-2 file:text-sm file:text-[#171512]" />
-      {uploading && <span className="text-xs text-muted-foreground">Uploading…</span>}
-    </span>
+    <div className="block text-sm text-[#1f1d1a]">
+      <label htmlFor={inputId} className="mb-2 block text-sm font-medium text-[#1f1d1a]">{label}</label>
+      <input id={inputId} value={value} onChange={(event) => onChange(event.target.value)} className="w-full rounded-sm border border-[#d7c2a6] bg-white/80 px-3 py-2.5 text-sm text-[#171512] outline-none placeholder:text-[#6d655f] focus:border-[#c79f5b]" />
+      <ImageUpload field={field} uploading={uploading} onChoose={onChoose} />
+    </div>
+  );
+}
+
+function ImageUpload({ field, uploading, onChoose }: { field: string; uploading: boolean; onChoose: (file?: File) => void }) {
+  const inputRef = useRef<HTMLInputElement>(null);
+  return (
+    <div className="mt-2 flex flex-wrap items-center gap-3">
+      <input ref={inputRef} type="file" accept="image/png,image/jpeg,image/webp,image/gif" aria-label={`Choose image for ${field}`} disabled={uploading} onChange={(event) => { const file = event.currentTarget.files?.[0]; onChoose(file); event.currentTarget.value = ""; }} className="sr-only" />
+      <button type="button" disabled={uploading} onClick={() => inputRef.current?.click()} className="inline-flex min-h-10 items-center justify-center rounded-sm border border-[#c79f5b] bg-white/70 px-4 text-sm font-medium text-[#171512] hover:bg-[#f3ebdd] disabled:cursor-wait disabled:opacity-60">
+        {uploading ? "Uploading…" : "Choose image"}
+      </button>
+      <span className="text-xs text-[#6d655f]">PNG, JPG, WebP or GIF · up to 5 MB</span>
+    </div>
   );
 }
