@@ -132,7 +132,7 @@ function WebsiteSettingsPage() {
     setSaving(true);
     setFeedback(null);
     try {
-      await setDoc(doc(getFirebaseDb(), ...SETTINGS_DOCUMENT), { ...settings, updatedAt: serverTimestamp() });
+      await setDoc(doc(getFirebaseDb(), ...SETTINGS_DOCUMENT), { ...settings, updatedAt: serverTimestamp() }, { merge: true });
       setFeedback({ type: "success", message: "Website settings saved." });
     } catch (error) {
       setFeedback({ type: "error", message: error instanceof Error ? error.message : "Could not save website settings." });

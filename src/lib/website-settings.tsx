@@ -3,6 +3,7 @@ import { doc, onSnapshot } from "firebase/firestore";
 import { getFirebaseDb, isFirebaseConfigured } from "@/lib/firebase";
 
 export type WebsiteService = { id: string; name: string; price: string; description: string };
+export type WebsiteShort = { id: string; title: string; url: string };
 
 export type WebsiteSettings = {
   brandName: string;
@@ -25,6 +26,7 @@ export type WebsiteSettings = {
   aboutImageUrl: string;
   services: WebsiteService[];
   packages: WebsiteService[];
+  shorts: WebsiteShort[];
 };
 
 export const defaultWebsiteSettings: WebsiteSettings = {
@@ -55,6 +57,7 @@ export const defaultWebsiteSettings: WebsiteSettings = {
     { id: "starter", name: "Starter Consultation", price: "₹2100", description: "A focused session for immediate guidance." },
     { id: "premium", name: "Premium Guidance", price: "₹5000", description: "Deeper guidance with detailed life insights." },
   ],
+  shorts: [],
 };
 
 const WebsiteSettingsContext = createContext<WebsiteSettings>(defaultWebsiteSettings);
@@ -74,6 +77,7 @@ export function WebsiteSettingsProvider({ children }: { children: ReactNode }) {
           ...saved,
           services: Array.isArray(saved.services) ? saved.services : defaultWebsiteSettings.services,
           packages: Array.isArray(saved.packages) ? saved.packages : defaultWebsiteSettings.packages,
+          shorts: Array.isArray(saved.shorts) ? saved.shorts : defaultWebsiteSettings.shorts,
         });
       },
       (error) => console.error("Could not load public website settings:", error),

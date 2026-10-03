@@ -15,6 +15,7 @@ import { Route as BookConsultationRouteImport } from './routes/book-consultation
 import { Route as AdminIndexRouteImport } from './routes/admin.index'
 import { Route as AdminConsultationsRouteImport } from './routes/admin.consultations'
 import { Route as AdminNotificationsRouteImport } from './routes/admin.notifications'
+import { Route as AdminReelsRouteImport } from './routes/admin.reels'
 import { Route as AdminSettingsRouteImport } from './routes/admin.settings'
 import { Route as AdminWhatsappRouteImport } from './routes/admin.whatsapp'
 import { Route as AdminLoginRouteImport } from './routes/admin_.login'
@@ -49,6 +50,11 @@ const AdminNotificationsRoute = AdminNotificationsRouteImport.update({
   path: '/notifications',
   getParentRoute: () => AdminRoute,
 } as any)
+const AdminReelsRoute = AdminReelsRouteImport.update({
+  id: '/reels',
+  path: '/reels',
+  getParentRoute: () => AdminRoute,
+} as any)
 const AdminSettingsRoute = AdminSettingsRouteImport.update({
   id: '/settings',
   path: '/settings',
@@ -71,6 +77,7 @@ export interface FileRoutesByFullPath {
   '/book-consultation': typeof BookConsultationRoute
   '/admin/consultations': typeof AdminConsultationsRoute
   '/admin/notifications': typeof AdminNotificationsRoute
+  '/admin/reels': typeof AdminReelsRoute
   '/admin/settings': typeof AdminSettingsRoute
   '/admin/whatsapp': typeof AdminWhatsappRoute
   '/admin/login': typeof AdminLoginRoute
@@ -81,6 +88,7 @@ export interface FileRoutesByTo {
   '/book-consultation': typeof BookConsultationRoute
   '/admin/consultations': typeof AdminConsultationsRoute
   '/admin/notifications': typeof AdminNotificationsRoute
+  '/admin/reels': typeof AdminReelsRoute
   '/admin/settings': typeof AdminSettingsRoute
   '/admin/whatsapp': typeof AdminWhatsappRoute
   '/admin/login': typeof AdminLoginRoute
@@ -93,6 +101,7 @@ export interface FileRoutesById {
   '/book-consultation': typeof BookConsultationRoute
   '/admin/consultations': typeof AdminConsultationsRoute
   '/admin/notifications': typeof AdminNotificationsRoute
+  '/admin/reels': typeof AdminReelsRoute
   '/admin/settings': typeof AdminSettingsRoute
   '/admin/whatsapp': typeof AdminWhatsappRoute
   '/admin_/login': typeof AdminLoginRoute
@@ -106,6 +115,7 @@ export interface FileRouteTypes {
     | '/book-consultation'
     | '/admin/consultations'
     | '/admin/notifications'
+    | '/admin/reels'
     | '/admin/settings'
     | '/admin/whatsapp'
     | '/admin/login'
@@ -116,6 +126,7 @@ export interface FileRouteTypes {
     | '/book-consultation'
     | '/admin/consultations'
     | '/admin/notifications'
+    | '/admin/reels'
     | '/admin/settings'
     | '/admin/whatsapp'
     | '/admin/login'
@@ -127,6 +138,7 @@ export interface FileRouteTypes {
     | '/book-consultation'
     | '/admin/consultations'
     | '/admin/notifications'
+    | '/admin/reels'
     | '/admin/settings'
     | '/admin/whatsapp'
     | '/admin_/login'
@@ -184,6 +196,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AdminNotificationsRouteImport
       parentRoute: typeof AdminRoute
     }
+    '/admin/reels': {
+      id: '/admin/reels'
+      path: '/reels'
+      fullPath: '/admin/reels'
+      preLoaderRoute: typeof AdminReelsRouteImport
+      parentRoute: typeof AdminRoute
+    }
     '/admin/settings': {
       id: '/admin/settings'
       path: '/settings'
@@ -211,6 +230,7 @@ declare module '@tanstack/react-router' {
 interface AdminRouteChildren {
   AdminConsultationsRoute: typeof AdminConsultationsRoute
   AdminNotificationsRoute: typeof AdminNotificationsRoute
+  AdminReelsRoute: typeof AdminReelsRoute
   AdminSettingsRoute: typeof AdminSettingsRoute
   AdminWhatsappRoute: typeof AdminWhatsappRoute
   AdminIndexRoute: typeof AdminIndexRoute
@@ -219,6 +239,7 @@ interface AdminRouteChildren {
 const AdminRouteChildren: AdminRouteChildren = {
   AdminConsultationsRoute: AdminConsultationsRoute,
   AdminNotificationsRoute: AdminNotificationsRoute,
+  AdminReelsRoute: AdminReelsRoute,
   AdminSettingsRoute: AdminSettingsRoute,
   AdminWhatsappRoute: AdminWhatsappRoute,
   AdminIndexRoute: AdminIndexRoute,

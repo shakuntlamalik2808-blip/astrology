@@ -7,6 +7,7 @@ import { Services } from "@/components/site/Services";
 import { ConsultationJourney } from "@/components/site/ConsultationJourney";
 import { About } from "@/components/site/About";
 import { Academy } from "@/components/site/Academy";
+import { Shorts } from "@/components/site/Shorts";
 import { Trust } from "@/components/site/Trust";
 import { BookingCTA } from "@/components/site/BookingCTA";
 import { Footer } from "@/components/site/Footer";
@@ -41,6 +42,7 @@ function Index() {
       <ConsultationJourney />
       <div className="defer-render"><About /></div>
       <div className="defer-render"><Academy /></div>
+      <div className="defer-render"><Shorts /></div>
       <div className="defer-render"><Trust /></div>
       <div className="defer-render"><BookingCTA /></div>
       <div className="defer-render"><Footer /></div>
