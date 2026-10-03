@@ -2,8 +2,7 @@ import { createFileRoute } from "@tanstack/react-router";
 import { useEffect, useRef, useState } from "react";
 import { RotateCcw, Save } from "lucide-react";
 import { doc, getDoc, serverTimestamp, setDoc } from "firebase/firestore";
-import { getDownloadURL, ref, uploadBytes } from "firebase/storage";
-import { getFirebaseDb, getFirebaseStorage, isFirebaseConfigured } from "@/lib/firebase";
+import { getFirebaseDb, isFirebaseConfigured } from "@/lib/firebase";
 
 type ServiceItem = {
   id: string;
@@ -36,6 +35,7 @@ type WebsiteSettings = {
 };
 
 const SETTINGS_DOCUMENT = ["settings", "website"] as const;
+const MEDIA_DOCUMENT = ["settings", "media"] as const;
 
 const defaultSettings: WebsiteSettings = {
   brandName: "Shakuntla Malik",
@@ -81,6 +81,7 @@ function WebsiteSettingsPage() {
   const [saving, setSaving] = useState(false);
   const [feedback, setFeedback] = useState<{ type: "success" | "error"; message: string } | null>(null);
   const [uploading, setUploading] = useState<string | null>(null);
+  const [cloudinary, setCloudinary] = useState({ cloudName: "", uploadPreset: "" });
 
   useEffect(() => {
     let active = true;
@@ -93,10 +94,17 @@ function WebsiteSettingsPage() {
         return;
       }
       try {
-        const snapshot = await getDoc(doc(getFirebaseDb(), ...SETTINGS_DOCUMENT));
+        const [snapshot, mediaSnapshot] = await Promise.all([
+          getDoc(doc(getFirebaseDb(), ...SETTINGS_DOCUMENT)),
+          getDoc(doc(getFirebaseDb(), ...MEDIA_DOCUMENT)),
+        ]);
         if (active && snapshot.exists()) {
           const saved = snapshot.data() as Partial<WebsiteSettings>;
           setSettings({ ...defaultSettings, ...saved, services: saved.services ?? defaultSettings.services, packages: saved.packages ?? defaultSettings.packages });
+        }
+        if (active && mediaSnapshot.exists()) {
+          const saved = mediaSnapshot.data();
+          setCloudinary({ cloudName: saved.cloudName ?? "", uploadPreset: saved.uploadPreset ?? "" });
         }
       } catch (error) {
         if (active) setFeedback({ type: "error", message: error instanceof Error ? error.message : "Could not load website settings from Firestore." });
@@ -122,21 +130,29 @@ function WebsiteSettingsPage() {
       setFeedback({ type: "error", message: "Images must be 5 MB or smaller." });
       return;
     }
+    if (!cloudinary.cloudName.trim() || !cloudinary.uploadPreset.trim()) {
+      setFeedback({ type: "error", message: "Enter and save your Cloudinary cloud name and unsigned upload preset first." });
+      return;
+    }
+    if (!/^[a-zA-Z0-9-]+$/.test(cloudinary.cloudName.trim())) {
+      setFeedback({ type: "error", message: "The Cloudinary cloud name may contain only letters, numbers, and hyphens." });
+      return;
+    }
     setUploading(key);
     setFeedback(null);
     try {
-      const safeName = file.name.replace(/[^a-zA-Z0-9._-]/g, "-");
-      const imageRef = ref(getFirebaseStorage(), `website-images/${key}-${Date.now()}-${safeName}`);
-      await uploadBytes(imageRef, file, { contentType: file.type });
-      updateField(key, await getDownloadURL(imageRef));
-      setFeedback({ type: "success", message: "Image uploaded. Save Changes to publish it on the website." });
+      const formData = new FormData();
+      formData.append("file", file);
+      formData.append("upload_preset", cloudinary.uploadPreset.trim());
+      const response = await fetch(`https://api.cloudinary.com/v1_1/${cloudinary.cloudName.trim()}/image/upload`, { method: "POST", body: formData });
+      const result = await response.json() as { secure_url?: string; error?: { message?: string } };
+      if (!response.ok || !result.secure_url) {
+        throw new Error(result.error?.message ?? `Cloudinary upload failed (${response.status}). Check the cloud name and unsigned upload preset.`);
+      }
+      updateField(key, result.secure_url);
+      setFeedback({ type: "success", message: "Image uploaded to Cloudinary. Save Changes to publish it on the website." });
     } catch (error) {
-      const code = (error as { code?: string })?.code;
-      const message = code === "storage/unauthorized"
-        ? "Firebase Storage denied this upload. Deploy the project's storage.rules, then try again."
-        : code === "storage/bucket-not-found"
-          ? "The Firebase Storage bucket was not found. Check the Storage bucket configured for this Firebase project."
-          : error instanceof Error ? error.message : "Could not upload image.";
+      const message = error instanceof Error ? error.message : "Could not upload image to Cloudinary.";
       setFeedback({ type: "error", message });
     } finally {
       setUploading(null);
@@ -165,7 +181,10 @@ function WebsiteSettingsPage() {
     setSaving(true);
     setFeedback(null);
     try {
-      await setDoc(doc(getFirebaseDb(), ...SETTINGS_DOCUMENT), { ...settings, updatedAt: serverTimestamp() }, { merge: true });
+      await Promise.all([
+        setDoc(doc(getFirebaseDb(), ...SETTINGS_DOCUMENT), { ...settings, updatedAt: serverTimestamp() }, { merge: true }),
+        setDoc(doc(getFirebaseDb(), ...MEDIA_DOCUMENT), { ...cloudinary, updatedAt: serverTimestamp() }, { merge: true }),
+      ]);
       setFeedback({ type: "success", message: "Website settings saved." });
     } catch (error) {
       setFeedback({ type: "error", message: error instanceof Error ? error.message : "Could not save website settings." });
@@ -280,7 +299,14 @@ function WebsiteSettingsPage() {
 
         <section className="rounded-sm border border-[#d7c2a6] bg-[#f7f2e8] p-5 text-[#171512] shadow-sm">
           <h2 className="font-display text-xl text-[#171512]">Media & Branding</h2>
+          <p className="mt-2 max-w-3xl text-sm leading-relaxed text-[#5e554d]">Image uploads use Cloudinary’s free plan. In the <a className="underline underline-offset-2" href="https://console.cloudinary.com/" target="_blank" rel="noreferrer">Cloudinary console</a>, create an unsigned preset restricted to JPG, PNG, WebP, and GIF (and disable public ID overrides). Enter your cloud name and preset below, then Save Changes before uploading. The free plan has monthly usage limits.</p>
           <div className="mt-4 grid gap-4 md:grid-cols-2">
+            <Field label="Cloudinary Cloud Name">
+              <input value={cloudinary.cloudName} onChange={(event) => setCloudinary((current) => ({ ...current, cloudName: event.target.value }))} placeholder="your-cloud-name" autoComplete="off" className="w-full rounded-sm border border-[#d7c2a6] bg-white/80 px-3 py-2.5 text-sm text-[#171512] outline-none placeholder:text-[#6d655f] focus:border-[#c79f5b]" />
+            </Field>
+            <Field label="Cloudinary Unsigned Upload Preset">
+              <input value={cloudinary.uploadPreset} onChange={(event) => setCloudinary((current) => ({ ...current, uploadPreset: event.target.value }))} placeholder="your-unsigned-preset" autoComplete="off" className="w-full rounded-sm border border-[#d7c2a6] bg-white/80 px-3 py-2.5 text-sm text-[#171512] outline-none placeholder:text-[#6d655f] focus:border-[#c79f5b]" />
+            </Field>
             <ImageField label="Logo URL" field="logoUrl" value={settings.logoUrl} uploading={uploading === "logoUrl"} onChange={(value) => updateField("logoUrl", value)} onChoose={(file) => void uploadImage("logoUrl", file)} />
             <ImageField label="Hero Image URL" field="heroImageUrl" value={settings.heroImageUrl} uploading={uploading === "heroImageUrl"} onChange={(value) => updateField("heroImageUrl", value)} onChoose={(file) => void uploadImage("heroImageUrl", file)} />
             <ImageField label="Service Image URL" field="serviceImageUrl" value={settings.serviceImageUrl} uploading={uploading === "serviceImageUrl"} onChange={(value) => updateField("serviceImageUrl", value)} onChoose={(file) => void uploadImage("serviceImageUrl", file)} />
