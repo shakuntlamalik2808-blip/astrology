@@ -135,6 +135,9 @@ function BookPage() {
     setSubmitError(null);
     const parsed = consultationSchema.safeParse({ ...values, phone: (values.phone ?? "").replace(/[\s-]/g, "") });
     if (!parsed.success) {
+      if (import.meta.env.DEV) {
+        console.warn("Consultation form validation failed:", parsed.error.issues.map(({ path, message }) => ({ field: path.join("."), message })));
+      }
       const next: Errors = {};
       for (const issue of parsed.error.issues) {
         const k = issue.path[0] as keyof ConsultationInput;
