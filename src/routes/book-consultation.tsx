@@ -68,9 +68,18 @@ function BookPage() {
   const [done, setDone] = useState<{ id: string; firstName: string } | null>(null);
   const [availableSlots, setAvailableSlots] = useState<{ id: string; date: string; time: string }[]>([]);
   const [bookedSlotIds, setBookedSlotIds] = useState<Set<string>>(new Set());
+  const [availabilityLoading, setAvailabilityLoading] = useState(true);
+  const [bookingsLoading, setBookingsLoading] = useState(true);
+  const [availabilityError, setAvailabilityError] = useState<string | null>(null);
+  const [bookingsError, setBookingsError] = useState<string | null>(null);
 
   useEffect(() => {
-    if (!isFirebaseConfigured()) return;
+    if (!isFirebaseConfigured()) {
+      setAvailabilityError("Booking is unavailable because Firebase is not configured for this site.");
+      setAvailabilityLoading(false);
+      setBookingsLoading(false);
+      return;
+    }
     const stopAvailability = onSnapshot(collection(getFirebaseDb(), "availableSlots"), (snapshot) => {
       setAvailableSlots(snapshot.docs.flatMap((item) => {
         const slot = item.data();
@@ -78,13 +87,33 @@ function BookPage() {
           ? [{ id: item.id, date: slot.date, time: slot.time }]
           : [];
       }));
-    }, (error) => console.error("Could not load available consultation times:", error));
+      setAvailabilityLoading(false);
+      setAvailabilityError(null);
+    }, (error) => {
+      console.error("Could not load available consultation times:", error);
+      const code = (error as { code?: string }).code;
+      setAvailabilityError(code === "permission-denied"
+        ? "The booking schedule is blocked by Firestore rules. Deploy the current firestore.rules to your Firebase project."
+        : "Available consultation times could not be loaded. Please refresh and try again.");
+      setAvailabilityLoading(false);
+    });
     const stopBookings = onSnapshot(collection(getFirebaseDb(), "bookedSlots"), (snapshot) => {
       setBookedSlotIds(new Set(snapshot.docs.map((item) => item.id)));
-    }, (error) => console.error("Could not load booked consultation times:", error));
+      setBookingsLoading(false);
+      setBookingsError(null);
+    }, (error) => {
+      console.error("Could not load booked consultation times:", error);
+      const code = (error as { code?: string }).code;
+      setBookingsError(code === "permission-denied"
+        ? "The booking schedule is blocked by Firestore rules. Deploy the current firestore.rules to your Firebase project."
+        : "Booked consultation times could not be loaded. Please refresh and try again.");
+      setBookingsLoading(false);
+    });
     return () => { stopAvailability(); stopBookings(); };
   }, []);
 
+  const scheduleLoading = availabilityLoading || bookingsLoading;
+  const scheduleError = availabilityError ?? bookingsError;
   const openSlots = availableSlots.filter((slot) => !bookedSlotIds.has(slot.id) && slot.date >= today());
   const availableDates = [...new Set(openSlots.map((slot) => slot.date))].sort();
   const availableTimes = openSlots.filter((slot) => slot.date === values.preferredDate).map((slot) => slot.time).sort();
@@ -141,7 +170,7 @@ function BookPage() {
         setSubmitError(err.message);
         setValues((current) => ({ ...current, preferredTime: "" }));
       } else {
-        setSubmitError("We couldn't save your request. Please try again in a moment.");
+        setSubmitError(err instanceof Error ? `We couldn't save your request: ${err.message}` : "We couldn't save your request. Please try again in a moment.");
       }
     } finally {
       setSubmitting(false);
@@ -244,8 +273,8 @@ function BookPage() {
                       </select>
                     </Field>
                     <Field id="preferredDate" label="Preferred date" error={errors.preferredDate}>
-                      <select id="f-preferredDate" value={values.preferredDate} onChange={(e) => { set("preferredDate")(e.target.value); set("preferredTime")(""); }} className={inputCls}>
-                        <option value="" className="bg-ink">Choose an available date</option>
+                      <select id="f-preferredDate" value={values.preferredDate} onChange={(e) => { set("preferredDate")(e.target.value); set("preferredTime")(""); }} disabled={scheduleLoading || Boolean(scheduleError) || availableDates.length === 0} className={`${inputCls} disabled:opacity-50`}>
+                        <option value="" className="bg-ink">{scheduleLoading ? "Loading available dates…" : "Choose an available date"}</option>
                         {availableDates.map((date) => <option key={date} value={date} className="bg-ink">{formatDate(date)}</option>)}
                       </select>
                     </Field>
@@ -254,7 +283,9 @@ function BookPage() {
                         <option value="" className="bg-ink">{values.preferredDate ? "Choose an available time" : "Choose a date first"}</option>
                         {availableTimes.map((time) => <option key={time} value={time} className="bg-ink">{formatTime(time)}</option>)}
                       </select>
-                      {availableDates.length === 0 && <p className="mt-2 text-sm text-ivory/50">No consultation times are currently open. Please check back soon.</p>}
+                      {scheduleError && <p role="alert" className="mt-2 text-sm text-gold-soft">{scheduleError}</p>}
+                      {!scheduleError && scheduleLoading && <p className="mt-2 text-sm text-ivory/50">Loading the appointment calendar…</p>}
+                      {!scheduleError && !scheduleLoading && availableDates.length === 0 && <p className="mt-2 text-sm text-ivory/50">No appointment times are available right now. Please check back soon.</p>}
                     </Field>
                     <Field id="additionalMessage" label="Additional message" hint="Optional" error={errors.additionalMessage} full>
                       <textarea id="f-additionalMessage" rows={4} placeholder="Tell us anything you'd like us to know before the consultation..." value={values.additionalMessage} onChange={(e) => set("additionalMessage")(e.target.value)} className={`${inputCls} min-h-28 resize-y py-3`} />
