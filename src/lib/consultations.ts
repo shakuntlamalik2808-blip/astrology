@@ -18,6 +18,9 @@ export const STATUSES = [
 ] as const;
 export type ConsultationStatus = (typeof STATUSES)[number];
 
+export const PAYMENT_STATUSES = ["Unpaid", "Partially paid", "Paid"] as const;
+export type PaymentStatus = (typeof PAYMENT_STATUSES)[number];
+
 export const COUNTRY_CODES = [
   { code: "+91", label: "India (+91)" },
   { code: "+1", label: "USA / Canada (+1)" },
@@ -63,6 +66,11 @@ export type Consultation = {
   additionalMessage: string;
   source: string;
   status: ConsultationStatus;
+  paymentStatus?: PaymentStatus;
+  paidAmount?: number;
+  paymentMethod?: string;
+  paymentReference?: string;
+  paymentDate?: string;
   notes?: string;
   archived?: boolean;
   customerId?: string;

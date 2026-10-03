@@ -8,6 +8,7 @@ import { getFirebaseDb } from "@/lib/firebase";
 import {
   CONSULTATION_TYPES,
   COUNTRY_CODES,
+  PAYMENT_STATUSES,
   STATUSES,
   consultationSchema,
   formatDate,
@@ -16,6 +17,7 @@ import {
   type Consultation,
   type ConsultationInput,
   type ConsultationStatus,
+  type PaymentStatus,
   bookingSlotId,
 } from "@/lib/consultations";
 import { StatusBadge } from "@/components/admin/StatusBadge";
@@ -40,7 +42,15 @@ export const Route = createFileRoute("/admin/consultations")({
 
 type Row = Consultation & { id: string };
 type SortKey = "createdAt" | "preferredDate" | "fullName";
-type AdminForm = ConsultationInput & { status: ConsultationStatus; notes: string };
+type AdminForm = ConsultationInput & {
+  status: ConsultationStatus;
+  notes: string;
+  paymentStatus: PaymentStatus;
+  paidAmount: string;
+  paymentMethod: string;
+  paymentReference: string;
+  paymentDate: string;
+};
 type FormErrors = Partial<Record<keyof AdminForm, string>>;
 
 const emptyForm: AdminForm = {
@@ -58,11 +68,21 @@ const emptyForm: AdminForm = {
   additionalMessage: "",
   status: "New",
   notes: "",
+  paymentStatus: "Unpaid",
+  paidAmount: "",
+  paymentMethod: "",
+  paymentReference: "",
+  paymentDate: "",
 };
 
 const adminSchema = consultationSchema.extend({
   status: z.enum(STATUSES),
   notes: z.string().max(3000, "Please keep notes under 3000 characters."),
+  paymentStatus: z.enum(PAYMENT_STATUSES),
+  paidAmount: z.coerce.number().finite().min(0, "Amount cannot be negative.").max(10000000, "Amount is too large."),
+  paymentMethod: z.enum(["", "Cash", "UPI", "Bank transfer", "Other"]),
+  paymentReference: z.string().max(120, "Please keep the payment reference under 120 characters."),
+  paymentDate: z.string().refine((value) => value === "" || /^\d{4}-\d{2}-\d{2}$/.test(value), "Enter a valid payment date."),
 });
 
 function splitPhone(whatsappNumber: string) {
@@ -89,6 +109,11 @@ function rowToForm(row: Row): AdminForm {
     additionalMessage: row.additionalMessage,
     status: row.status,
     notes: row.notes ?? "",
+    paymentStatus: row.paymentStatus ?? "Unpaid",
+    paidAmount: row.paidAmount === undefined ? "" : String(row.paidAmount),
+    paymentMethod: row.paymentMethod ?? "",
+    paymentReference: row.paymentReference ?? "",
+    paymentDate: row.paymentDate ?? "",
   };
 }
 
@@ -147,9 +172,9 @@ function ConsultationsPage() {
       </div>
 
       <div className="mt-6 overflow-x-auto rounded-sm border border-border bg-card">
-        <table className="w-full min-w-[680px] text-sm">
+        <table className="w-full min-w-[820px] text-sm">
           <thead className="border-b border-border text-left text-xs uppercase tracking-[0.12em] text-muted-foreground">
-            <tr>{["Customer", "Consultation", "Preferred Date", "Preferred Time", "Status"].map((heading) => <th key={heading} className="px-5 py-3 font-medium">{heading}</th>)}</tr>
+            <tr>{["Customer", "Consultation", "Preferred Date", "Preferred Time", "Status", "Payment"].map((heading) => <th key={heading} className="px-5 py-3 font-medium">{heading}</th>)}</tr>
           </thead>
           <tbody className="divide-y divide-border">
             {list.map((row) => (
@@ -159,10 +184,11 @@ function ConsultationsPage() {
                 <td className="px-5 py-3">{formatDate(row.preferredDate)}</td>
                 <td className="px-5 py-3">{formatTime(row.preferredTime)}</td>
                 <td className="px-5 py-3"><StatusBadge status={row.status} /></td>
+                <td className="px-5 py-3"><span className={`rounded-full border px-2.5 py-1 text-xs ${row.paymentStatus === "Paid" ? "border-emerald-500/30 bg-emerald-500/10 text-emerald-700" : row.paymentStatus === "Partially paid" ? "border-amber-500/30 bg-amber-500/10 text-amber-700" : "border-border bg-muted text-muted-foreground"}`}>{row.paymentStatus ?? "Unpaid"}</span>{(row.paidAmount ?? 0) > 0 && <span className="ml-2 text-xs text-muted-foreground">₹{row.paidAmount}</span>}</td>
               </tr>
             ))}
-            {rows && list.length === 0 && <tr><td colSpan={5} className="px-5 py-10 text-center text-muted-foreground">No matching consultations.</td></tr>}
-            {!rows && !error && <tr><td colSpan={5} className="px-5 py-10 text-center text-muted-foreground">Loading…</td></tr>}
+            {rows && list.length === 0 && <tr><td colSpan={6} className="px-5 py-10 text-center text-muted-foreground">No matching consultations.</td></tr>}
+            {!rows && !error && <tr><td colSpan={6} className="px-5 py-10 text-center text-muted-foreground">Loading…</td></tr>}
           </tbody>
         </table>
       </div>
@@ -222,6 +248,11 @@ function ConsultationForm({ mode, initial, row, onClose }: { mode: "create" | "e
       additionalMessage: data.additionalMessage,
       status: data.status,
       notes: data.notes.trim(),
+      paymentStatus: data.paymentStatus,
+      paidAmount: data.paidAmount,
+      paymentMethod: data.paymentMethod,
+      paymentReference: data.paymentReference.trim(),
+      paymentDate: data.paymentDate,
       updatedAt: serverTimestamp(),
     };
 
@@ -319,6 +350,14 @@ function ConsultationForm({ mode, initial, row, onClose }: { mode: "create" | "e
           <FormField label="Preferred time" error={errors.preferredTime}><input type="time" value={form.preferredTime} onChange={(event) => set("preferredTime")(event.target.value)} className={inputClass} /></FormField>
           <FormField label="Client message" error={errors.additionalMessage} full><textarea rows={3} value={form.additionalMessage} onChange={(event) => set("additionalMessage")(event.target.value)} className={`${inputClass} h-auto py-2`} /></FormField>
           <FormField label="Internal notes" error={errors.notes} full><textarea rows={3} value={form.notes} onChange={(event) => set("notes")(event.target.value)} className={`${inputClass} h-auto py-2`} /></FormField>
+        </FormSection>
+
+        <FormSection title="Payment tracking">
+          <FormField label="Payment status" error={errors.paymentStatus}><select value={form.paymentStatus} onChange={(event) => set("paymentStatus")(event.target.value)} className={inputClass}>{PAYMENT_STATUSES.map((item) => <option key={item}>{item}</option>)}</select></FormField>
+          <FormField label="Amount received (₹)" error={errors.paidAmount}><input type="number" min="0" step="0.01" inputMode="decimal" value={form.paidAmount} onChange={(event) => set("paidAmount")(event.target.value)} className={inputClass} /></FormField>
+          <FormField label="Payment method" error={errors.paymentMethod}><select value={form.paymentMethod} onChange={(event) => set("paymentMethod")(event.target.value)} className={inputClass}><option value="">Not recorded</option><option>Cash</option><option>UPI</option><option>Bank transfer</option><option>Other</option></select></FormField>
+          <FormField label="Payment date" error={errors.paymentDate}><input type="date" value={form.paymentDate} onChange={(event) => set("paymentDate")(event.target.value)} className={inputClass} /></FormField>
+          <FormField label="Payment reference" error={errors.paymentReference} full><input placeholder="Optional transaction ID or receipt number" value={form.paymentReference} onChange={(event) => set("paymentReference")(event.target.value)} className={inputClass} /></FormField>
         </FormSection>
       </div>
 
