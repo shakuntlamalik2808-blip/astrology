@@ -1,6 +1,7 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { AnimatePresence, motion, useReducedMotion } from "motion/react";
-import { useState, type FormEvent, type ReactNode } from "react";
+import { useEffect, useState, type FormEvent, type ReactNode } from "react";
+import { collection, onSnapshot } from "firebase/firestore";
 import { Navbar } from "@/components/site/Navbar";
 import { Footer } from "@/components/site/Footer";
 import { Starfield } from "@/components/site/Starfield";
@@ -13,6 +14,7 @@ import {
   type ConsultationInput,
 } from "@/lib/consultations";
 import { isFirebaseConfigured } from "@/lib/firebase-config";
+import { getFirebaseDb } from "@/lib/firebase";
 import { useWebsiteSettings, WebsiteSettingsProvider } from "@/lib/website-settings";
 
 const title = "Book a Consultation — Shakuntla Malik";
@@ -64,11 +66,39 @@ function BookPage() {
   const [submitting, setSubmitting] = useState(false);
   const [submitError, setSubmitError] = useState<string | null>(null);
   const [done, setDone] = useState<{ id: string; firstName: string } | null>(null);
+  const [availableSlots, setAvailableSlots] = useState<{ id: string; date: string; time: string }[]>([]);
+  const [bookedSlotIds, setBookedSlotIds] = useState<Set<string>>(new Set());
+
+  useEffect(() => {
+    if (!isFirebaseConfigured()) return;
+    const stopAvailability = onSnapshot(collection(getFirebaseDb(), "availableSlots"), (snapshot) => {
+      setAvailableSlots(snapshot.docs.flatMap((item) => {
+        const slot = item.data();
+        return slot.enabled && typeof slot.date === "string" && typeof slot.time === "string"
+          ? [{ id: item.id, date: slot.date, time: slot.time }]
+          : [];
+      }));
+    }, (error) => console.error("Could not load available consultation times:", error));
+    const stopBookings = onSnapshot(collection(getFirebaseDb(), "bookedSlots"), (snapshot) => {
+      setBookedSlotIds(new Set(snapshot.docs.map((item) => item.id)));
+    }, (error) => console.error("Could not load booked consultation times:", error));
+    return () => { stopAvailability(); stopBookings(); };
+  }, []);
+
+  const openSlots = availableSlots.filter((slot) => !bookedSlotIds.has(slot.id) && slot.date >= today());
+  const availableDates = [...new Set(openSlots.map((slot) => slot.date))].sort();
+  const availableTimes = openSlots.filter((slot) => slot.date === values.preferredDate).map((slot) => slot.time).sort();
 
   const set = (k: keyof ConsultationInput) => (v: string) => {
     setValues((s) => ({ ...s, [k]: v }));
     if (errors[k]) setErrors((e) => ({ ...e, [k]: undefined }));
   };
+
+  useEffect(() => {
+    if (values.preferredTime && !availableTimes.includes(values.preferredTime)) {
+      setValues((current) => ({ ...current, preferredTime: "" }));
+    }
+  }, [values.preferredDate, availableTimes.join(",")]);
 
   async function onSubmit(e: FormEvent) {
     e.preventDefault();
@@ -104,6 +134,12 @@ function BookPage() {
         setSubmitError("Your request could not be saved because Firestore denied the write. Deploy the current firestore.rules file to your Firebase project, then try again.");
       } else if (code === "unavailable" || code === "deadline-exceeded") {
         setSubmitError("We couldn't reach Firestore. Check your connection and try submitting again.");
+      } else if (err instanceof Error && err.message.includes("no longer available")) {
+        setSubmitError(err.message);
+        setValues((current) => ({ ...current, preferredTime: "" }));
+      } else if (err instanceof Error && err.message.includes("just booked")) {
+        setSubmitError(err.message);
+        setValues((current) => ({ ...current, preferredTime: "" }));
       } else {
         setSubmitError("We couldn't save your request. Please try again in a moment.");
       }
@@ -208,10 +244,17 @@ function BookPage() {
                       </select>
                     </Field>
                     <Field id="preferredDate" label="Preferred date" error={errors.preferredDate}>
-                      <input id="f-preferredDate" type="date" min={today()} value={values.preferredDate} onChange={(e) => set("preferredDate")(e.target.value)} className={inputCls} />
+                      <select id="f-preferredDate" value={values.preferredDate} onChange={(e) => { set("preferredDate")(e.target.value); set("preferredTime")(""); }} className={inputCls}>
+                        <option value="" className="bg-ink">Choose an available date</option>
+                        {availableDates.map((date) => <option key={date} value={date} className="bg-ink">{formatDate(date)}</option>)}
+                      </select>
                     </Field>
                     <Field id="preferredTime" label="Preferred time" error={errors.preferredTime}>
-                      <input id="f-preferredTime" type="time" value={values.preferredTime} onChange={(e) => set("preferredTime")(e.target.value)} className={inputCls} />
+                      <select id="f-preferredTime" value={values.preferredTime} onChange={(e) => set("preferredTime")(e.target.value)} disabled={!values.preferredDate || availableTimes.length === 0} className={`${inputCls} disabled:opacity-50`}>
+                        <option value="" className="bg-ink">{values.preferredDate ? "Choose an available time" : "Choose a date first"}</option>
+                        {availableTimes.map((time) => <option key={time} value={time} className="bg-ink">{formatTime(time)}</option>)}
+                      </select>
+                      {availableDates.length === 0 && <p className="mt-2 text-sm text-ivory/50">No consultation times are currently open. Please check back soon.</p>}
                     </Field>
                     <Field id="additionalMessage" label="Additional message" hint="Optional" error={errors.additionalMessage} full>
                       <textarea id="f-additionalMessage" rows={4} placeholder="Tell us anything you'd like us to know before the consultation..." value={values.additionalMessage} onChange={(e) => set("additionalMessage")(e.target.value)} className={`${inputCls} min-h-28 resize-y py-3`} />

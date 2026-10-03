@@ -1,6 +1,6 @@
 import { createFileRoute, Link, Outlet, useNavigate } from "@tanstack/react-router";
 import { useEffect } from "react";
-import { Bell, Clapperboard, LayoutDashboard, LogOut, Settings2, Users } from "lucide-react";
+import { Bell, CalendarDays, Clapperboard, LayoutDashboard, LogOut, Settings2, Users } from "lucide-react";
 import { adminSignOut, useAdminAuth } from "@/lib/admin-auth";
 
 export const Route = createFileRoute("/admin")({
@@ -18,6 +18,7 @@ export const Route = createFileRoute("/admin")({
 const nav = [
   { to: "/admin", label: "Dashboard", icon: LayoutDashboard, exact: true },
   { to: "/admin/consultations", label: "Consultations", icon: Users, exact: false },
+  { to: "/admin/availability", label: "Availability", icon: CalendarDays, exact: false },
   { to: "/admin/notifications", label: "Notifications", icon: Bell, exact: false },
   { to: "/admin/settings", label: "Website Settings", icon: Settings2, exact: false },
   { to: "/admin/reels", label: "YouTube Shorts", icon: Clapperboard, exact: false },

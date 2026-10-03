@@ -13,6 +13,7 @@ import { Route as IndexRouteImport } from './routes/index'
 import { Route as AdminRouteImport } from './routes/admin'
 import { Route as BookConsultationRouteImport } from './routes/book-consultation'
 import { Route as AdminIndexRouteImport } from './routes/admin.index'
+import { Route as AdminAvailabilityRouteImport } from './routes/admin.availability'
 import { Route as AdminConsultationsRouteImport } from './routes/admin.consultations'
 import { Route as AdminNotificationsRouteImport } from './routes/admin.notifications'
 import { Route as AdminReelsRouteImport } from './routes/admin.reels'
@@ -38,6 +39,11 @@ const BookConsultationRoute = BookConsultationRouteImport.update({
 const AdminIndexRoute = AdminIndexRouteImport.update({
   id: '/',
   path: '/',
+  getParentRoute: () => AdminRoute,
+} as any)
+const AdminAvailabilityRoute = AdminAvailabilityRouteImport.update({
+  id: '/availability',
+  path: '/availability',
   getParentRoute: () => AdminRoute,
 } as any)
 const AdminConsultationsRoute = AdminConsultationsRouteImport.update({
@@ -75,6 +81,7 @@ export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
   '/admin': typeof AdminRouteWithChildren
   '/book-consultation': typeof BookConsultationRoute
+  '/admin/availability': typeof AdminAvailabilityRoute
   '/admin/consultations': typeof AdminConsultationsRoute
   '/admin/notifications': typeof AdminNotificationsRoute
   '/admin/reels': typeof AdminReelsRoute
@@ -86,6 +93,7 @@ export interface FileRoutesByFullPath {
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/book-consultation': typeof BookConsultationRoute
+  '/admin/availability': typeof AdminAvailabilityRoute
   '/admin/consultations': typeof AdminConsultationsRoute
   '/admin/notifications': typeof AdminNotificationsRoute
   '/admin/reels': typeof AdminReelsRoute
@@ -99,6 +107,7 @@ export interface FileRoutesById {
   '/': typeof IndexRoute
   '/admin': typeof AdminRouteWithChildren
   '/book-consultation': typeof BookConsultationRoute
+  '/admin/availability': typeof AdminAvailabilityRoute
   '/admin/consultations': typeof AdminConsultationsRoute
   '/admin/notifications': typeof AdminNotificationsRoute
   '/admin/reels': typeof AdminReelsRoute
@@ -113,6 +122,7 @@ export interface FileRouteTypes {
     | '/'
     | '/admin'
     | '/book-consultation'
+    | '/admin/availability'
     | '/admin/consultations'
     | '/admin/notifications'
     | '/admin/reels'
@@ -124,6 +134,7 @@ export interface FileRouteTypes {
   to:
     | '/'
     | '/book-consultation'
+    | '/admin/availability'
     | '/admin/consultations'
     | '/admin/notifications'
     | '/admin/reels'
@@ -136,6 +147,7 @@ export interface FileRouteTypes {
     | '/'
     | '/admin'
     | '/book-consultation'
+    | '/admin/availability'
     | '/admin/consultations'
     | '/admin/notifications'
     | '/admin/reels'
@@ -180,6 +192,13 @@ declare module '@tanstack/react-router' {
       path: '/'
       fullPath: '/admin/'
       preLoaderRoute: typeof AdminIndexRouteImport
+      parentRoute: typeof AdminRoute
+    }
+    '/admin/availability': {
+      id: '/admin/availability'
+      path: '/availability'
+      fullPath: '/admin/availability'
+      preLoaderRoute: typeof AdminAvailabilityRouteImport
       parentRoute: typeof AdminRoute
     }
     '/admin/consultations': {
@@ -228,6 +247,7 @@ declare module '@tanstack/react-router' {
 }
 
 interface AdminRouteChildren {
+  AdminAvailabilityRoute: typeof AdminAvailabilityRoute
   AdminConsultationsRoute: typeof AdminConsultationsRoute
   AdminNotificationsRoute: typeof AdminNotificationsRoute
   AdminReelsRoute: typeof AdminReelsRoute
@@ -237,6 +257,7 @@ interface AdminRouteChildren {
 }
 
 const AdminRouteChildren: AdminRouteChildren = {
+  AdminAvailabilityRoute: AdminAvailabilityRoute,
   AdminConsultationsRoute: AdminConsultationsRoute,
   AdminNotificationsRoute: AdminNotificationsRoute,
   AdminReelsRoute: AdminReelsRoute,

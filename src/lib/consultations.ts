@@ -81,11 +81,13 @@ export function makeConsultationId() {
   return `SS-${ymd}-${rand}`;
 }
 
+export const bookingSlotId = (date: string, time: string) => `${date}_${time}`;
+
 const LAST_KEY = "ss_last_submission";
 
 /** Writes the consultation. Customer linking + WhatsApp happen server-side (Cloud Function). */
 export async function submitConsultation(data: ConsultationData): Promise<string> {
-  const fingerprint = `${data.email}|${data.phone}|${data.consultationType}|${data.preferredDate}`;
+  const fingerprint = `${data.email}|${data.phone}|${data.consultationType}|${data.preferredDate}|${data.preferredTime}`;
   try {
     const last = JSON.parse(localStorage.getItem(LAST_KEY) ?? "null") as { f: string; t: number; id: string } | null;
     if (last && last.f === fingerprint && Date.now() - last.t < 2 * 60 * 1000) return last.id;
@@ -94,28 +96,43 @@ export async function submitConsultation(data: ConsultationData): Promise<string
   }
 
   const id = makeConsultationId();
-  const [{ collection, doc, serverTimestamp, setDoc }, { getFirebaseDb }] = await Promise.all([
+  const [{ collection, doc, runTransaction, serverTimestamp }, { getFirebaseDb }] = await Promise.all([
     import("firebase/firestore"),
     import("./firebase"),
   ]);
   const db = getFirebaseDb();
-  await setDoc(doc(collection(db, "consultations"), id), {
-    consultationId: id,
-    fullName: data.fullName,
-    whatsappNumber: `${data.countryCode}${data.phone}`,
-    email: data.email.toLowerCase(),
-    dateOfBirth: data.dateOfBirth,
-    timeOfBirth: data.timeOfBirth ?? "",
-    placeOfBirth: data.placeOfBirth,
-    currentCity: data.currentCity,
-    consultationType: data.consultationType,
-    preferredDate: data.preferredDate,
-    preferredTime: data.preferredTime,
-    additionalMessage: data.additionalMessage,
-    source: "website",
-    status: "New",
-    createdAt: serverTimestamp(),
-    updatedAt: serverTimestamp(),
+  const slotId = bookingSlotId(data.preferredDate, data.preferredTime);
+  await runTransaction(db, async (transaction) => {
+    const availabilityRef = doc(db, "availableSlots", slotId);
+    const bookingRef = doc(db, "bookedSlots", slotId);
+    const [availability, booking] = await Promise.all([
+      transaction.get(availabilityRef),
+      transaction.get(bookingRef),
+    ]);
+    if (!availability.exists() || !availability.data().enabled) {
+      throw new Error("This time is no longer available. Please choose another slot.");
+    }
+    if (booking.exists()) throw new Error("This time was just booked. Please choose another slot.");
+
+    transaction.set(doc(collection(db, "consultations"), id), {
+      consultationId: id,
+      fullName: data.fullName,
+      whatsappNumber: `${data.countryCode}${data.phone}`,
+      email: data.email.toLowerCase(),
+      dateOfBirth: data.dateOfBirth,
+      timeOfBirth: data.timeOfBirth ?? "",
+      placeOfBirth: data.placeOfBirth,
+      currentCity: data.currentCity,
+      consultationType: data.consultationType,
+      preferredDate: data.preferredDate,
+      preferredTime: data.preferredTime,
+      additionalMessage: data.additionalMessage,
+      source: "website",
+      status: "New",
+      createdAt: serverTimestamp(),
+      updatedAt: serverTimestamp(),
+    });
+    transaction.set(bookingRef, { date: data.preferredDate, time: data.preferredTime, consultationId: id });
   });
   localStorage.setItem(LAST_KEY, JSON.stringify({ f: fingerprint, t: Date.now(), id }));
   return id;

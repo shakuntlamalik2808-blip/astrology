@@ -16,6 +16,7 @@ import {
   type Consultation,
   type ConsultationInput,
   type ConsultationStatus,
+  bookingSlotId,
 } from "@/lib/consultations";
 import { StatusBadge } from "@/components/admin/StatusBadge";
 import { Button } from "@/components/ui/button";
@@ -234,8 +235,23 @@ function ConsultationForm({ mode, initial, row, onClose }: { mode: "create" | "e
           archived: false,
           createdAt: serverTimestamp(),
         });
+        if (data.status !== "Cancelled") {
+          await setDoc(doc(getFirebaseDb(), "bookedSlots", bookingSlotId(data.preferredDate, data.preferredTime)), {
+            date: data.preferredDate, time: data.preferredTime, consultationId: id,
+          });
+        }
       } else if (row) {
         await updateDoc(doc(getFirebaseDb(), "consultations", row.id), payload);
+        const oldSlotId = bookingSlotId(row.preferredDate, row.preferredTime);
+        const newSlotId = bookingSlotId(data.preferredDate, data.preferredTime);
+        if (oldSlotId !== newSlotId || data.status === "Cancelled") {
+          await deleteDoc(doc(getFirebaseDb(), "bookedSlots", oldSlotId));
+        }
+        if (data.status !== "Cancelled") {
+          await setDoc(doc(getFirebaseDb(), "bookedSlots", newSlotId), {
+            date: data.preferredDate, time: data.preferredTime, consultationId: row.consultationId,
+          });
+        }
       }
       onClose();
     } catch (cause) {
@@ -251,6 +267,7 @@ function ConsultationForm({ mode, initial, row, onClose }: { mode: "create" | "e
     setError(null);
     try {
       await deleteDoc(doc(getFirebaseDb(), "consultations", row.id));
+      await deleteDoc(doc(getFirebaseDb(), "bookedSlots", bookingSlotId(row.preferredDate, row.preferredTime)));
       onClose();
     } catch (cause) {
       setError((cause as Error).message || "Could not delete this consultation.");

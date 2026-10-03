@@ -9,6 +9,7 @@ service cloud.firestore {
     }
 
     function str(v, min, max) { return v is string && v.size() >= min && v.size() <= max; }
+    function slotId(v) { return v.preferredDate + '_' + v.preferredTime; }
 
     // ── Consultations ────────────────────────────────────────────────────────
     match /consultations/{id} {
@@ -40,12 +41,32 @@ service cloud.firestore {
         && str(request.resource.data.additionalMessage, 0, 1500)
         && request.resource.data.source == 'website'
         && request.resource.data.status == 'New'
-        && request.resource.data.createdAt == request.time;
+        && request.resource.data.createdAt == request.time
+        && get(/databases/$(database)/documents/availableSlots/$(slotId(request.resource.data))).data.enabled == true
+        && getAfter(/databases/$(database)/documents/bookedSlots/$(slotId(request.resource.data))).data.consultationId == id;
     }
 
     // ── Other admin-only collections ─────────────────────────────────────────
     match /customers/{id}     { allow read, write: if isAdmin(); }
     match /notifications/{id} { allow read: if isAdmin(); allow write: if false; }
+
+    // Public visitors can view open times and minimal date/time reservations.
+    // Only admins can manage availability; a public reservation must be written
+    // in the same transaction as its consultation and reference an enabled slot.
+    match /availableSlots/{id} {
+      allow read: if true;
+      allow write: if isAdmin();
+    }
+    match /bookedSlots/{id} {
+      allow read: if true;
+      allow create: if isAdmin() || (!isAdmin()
+        && request.resource.data.keys().hasOnly(['date', 'time', 'consultationId'])
+        && id == request.resource.data.date + '_' + request.resource.data.time
+        && get(/databases/$(database)/documents/availableSlots/$(id)).data.enabled == true
+        && getAfter(/databases/$(database)/documents/consultations/$(request.resource.data.consultationId)).data.preferredDate == request.resource.data.date
+        && getAfter(/databases/$(database)/documents/consultations/$(request.resource.data.consultationId)).data.preferredTime == request.resource.data.time);
+      allow update, delete: if isAdmin();
+    }
 
     // settings/* is seeded automatically on first login — admins need write
     // access so the client can create the document if it doesn't exist yet.

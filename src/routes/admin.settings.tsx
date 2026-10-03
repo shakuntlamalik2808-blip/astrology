@@ -2,7 +2,8 @@ import { createFileRoute } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
 import { RotateCcw, Save } from "lucide-react";
 import { doc, getDoc, serverTimestamp, setDoc } from "firebase/firestore";
-import { getFirebaseDb, isFirebaseConfigured } from "@/lib/firebase";
+import { getDownloadURL, ref, uploadBytes } from "firebase/storage";
+import { getFirebaseDb, getFirebaseStorage, isFirebaseConfigured } from "@/lib/firebase";
 
 type ServiceItem = {
   id: string;
@@ -79,6 +80,7 @@ function WebsiteSettingsPage() {
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [feedback, setFeedback] = useState<{ type: "success" | "error"; message: string } | null>(null);
+  const [uploading, setUploading] = useState<string | null>(null);
 
   useEffect(() => {
     let active = true;
@@ -108,6 +110,31 @@ function WebsiteSettingsPage() {
 
   const updateField = <K extends keyof WebsiteSettings>(key: K, value: WebsiteSettings[K]) => {
     setSettings((prev) => ({ ...prev, [key]: value }));
+  };
+
+  const uploadImage = async (key: "logoUrl" | "heroImageUrl" | "serviceImageUrl" | "aboutImageUrl", file?: File) => {
+    if (!file) return;
+    if (!file.type.startsWith("image/")) {
+      setFeedback({ type: "error", message: "Choose an image file." });
+      return;
+    }
+    if (file.size > 5 * 1024 * 1024) {
+      setFeedback({ type: "error", message: "Images must be 5 MB or smaller." });
+      return;
+    }
+    setUploading(key);
+    setFeedback(null);
+    try {
+      const safeName = file.name.replace(/[^a-zA-Z0-9._-]/g, "-");
+      const imageRef = ref(getFirebaseStorage(), `website-images/${key}-${Date.now()}-${safeName}`);
+      await uploadBytes(imageRef, file, { contentType: file.type });
+      updateField(key, await getDownloadURL(imageRef));
+      setFeedback({ type: "success", message: "Image uploaded. Save Changes to publish it on the website." });
+    } catch (error) {
+      setFeedback({ type: "error", message: error instanceof Error ? error.message : "Could not upload image." });
+    } finally {
+      setUploading(null);
+    }
   };
 
   const updateService = (index: number, field: keyof ServiceItem, value: string) => {
@@ -250,15 +277,19 @@ function WebsiteSettingsPage() {
           <div className="mt-4 grid gap-4 md:grid-cols-2">
             <Field label="Logo URL">
               <input value={settings.logoUrl} onChange={(e) => updateField("logoUrl", e.target.value)} className="w-full rounded-sm border border-[#d7c2a6] bg-white/80 px-3 py-2.5 text-sm text-[#171512] outline-none placeholder:text-[#6d655f] focus:border-[#c79f5b]" />
+              <ImageUpload field="logoUrl" uploading={uploading === "logoUrl"} onChoose={(file) => void uploadImage("logoUrl", file)} />
             </Field>
             <Field label="Hero Image URL">
               <input value={settings.heroImageUrl} onChange={(e) => updateField("heroImageUrl", e.target.value)} className="w-full rounded-sm border border-[#d7c2a6] bg-white/80 px-3 py-2.5 text-sm text-[#171512] outline-none placeholder:text-[#6d655f] focus:border-[#c79f5b]" />
+              <ImageUpload field="heroImageUrl" uploading={uploading === "heroImageUrl"} onChoose={(file) => void uploadImage("heroImageUrl", file)} />
             </Field>
             <Field label="Service Image URL">
               <input value={settings.serviceImageUrl} onChange={(e) => updateField("serviceImageUrl", e.target.value)} className="w-full rounded-sm border border-[#d7c2a6] bg-white/80 px-3 py-2.5 text-sm text-[#171512] outline-none placeholder:text-[#6d655f] focus:border-[#c79f5b]" />
+              <ImageUpload field="serviceImageUrl" uploading={uploading === "serviceImageUrl"} onChoose={(file) => void uploadImage("serviceImageUrl", file)} />
             </Field>
             <Field label="About Image URL">
               <input value={settings.aboutImageUrl} onChange={(e) => updateField("aboutImageUrl", e.target.value)} className="w-full rounded-sm border border-[#d7c2a6] bg-white/80 px-3 py-2.5 text-sm text-[#171512] outline-none placeholder:text-[#6d655f] focus:border-[#c79f5b]" />
+              <ImageUpload field="aboutImageUrl" uploading={uploading === "aboutImageUrl"} onChoose={(file) => void uploadImage("aboutImageUrl", file)} />
             </Field>
           </div>
         </section>
@@ -288,5 +319,14 @@ function Field({ label, children }: { label: string; children: React.ReactNode }
       <span className="mb-2 block text-sm font-medium text-[#1f1d1a]">{label}</span>
       {children}
     </label>
+  );
+}
+
+function ImageUpload({ field, uploading, onChoose }: { field: string; uploading: boolean; onChoose: (file?: File) => void }) {
+  return (
+    <span className="mt-2 flex flex-wrap items-center gap-3">
+      <input type="file" accept="image/*" aria-label={`Upload ${field}`} disabled={uploading} onChange={(event) => { onChoose(event.currentTarget.files?.[0]); event.currentTarget.value = ""; }} className="max-w-full text-xs file:mr-3 file:rounded-sm file:border file:border-[#d7c2a6] file:bg-white file:px-3 file:py-2 file:text-sm file:text-[#171512]" />
+      {uploading && <span className="text-xs text-muted-foreground">Uploading…</span>}
+    </span>
   );
 }
