@@ -80,6 +80,7 @@ function WebsiteSettingsPage() {
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [feedback, setFeedback] = useState<{ type: "success" | "error"; message: string } | null>(null);
+  const [mediaFeedback, setMediaFeedback] = useState<{ type: "success" | "error"; message: string } | null>(null);
   const [uploading, setUploading] = useState<string | null>(null);
   const [cloudinary, setCloudinary] = useState({ cloudName: "", uploadPreset: "" });
 
@@ -131,29 +132,36 @@ function WebsiteSettingsPage() {
       return;
     }
     if (!cloudinary.cloudName.trim() || !cloudinary.uploadPreset.trim()) {
-      setFeedback({ type: "error", message: "Enter and save your Cloudinary cloud name and unsigned upload preset first." });
+      setMediaFeedback({ type: "error", message: "Enter and save your Cloudinary cloud name and unsigned upload preset first." });
       return;
     }
     if (!/^[a-zA-Z0-9-]+$/.test(cloudinary.cloudName.trim())) {
-      setFeedback({ type: "error", message: "The Cloudinary cloud name may contain only letters, numbers, and hyphens." });
+      setMediaFeedback({ type: "error", message: "The Cloudinary cloud name may contain only letters, numbers, and hyphens." });
       return;
     }
     setUploading(key);
-    setFeedback(null);
+    setMediaFeedback(null);
     try {
       const formData = new FormData();
       formData.append("file", file);
       formData.append("upload_preset", cloudinary.uploadPreset.trim());
       const response = await fetch(`https://api.cloudinary.com/v1_1/${cloudinary.cloudName.trim()}/image/upload`, { method: "POST", body: formData });
-      const result = await response.json() as { secure_url?: string; error?: { message?: string } };
+      const responseText = await response.text();
+      let result: { secure_url?: string; error?: { message?: string } } = {};
+      try {
+        result = JSON.parse(responseText) as typeof result;
+      } catch {
+        // Use the response header/status below when Cloudinary doesn't return JSON.
+      }
       if (!response.ok || !result.secure_url) {
-        throw new Error(result.error?.message ?? `Cloudinary upload failed (${response.status}). Check the cloud name and unsigned upload preset.`);
+        const detail = response.headers.get("X-Cld-Error") ?? result.error?.message;
+        throw new Error(detail || `Cloudinary upload failed (${response.status}). Confirm the cloud name and that the preset exists and is unsigned.`);
       }
       updateField(key, result.secure_url);
-      setFeedback({ type: "success", message: "Image uploaded to Cloudinary. Save Changes to publish it on the website." });
+      setMediaFeedback({ type: "success", message: "Image uploaded to Cloudinary. Select Save Changes below to publish it on the website." });
     } catch (error) {
       const message = error instanceof Error ? error.message : "Could not upload image to Cloudinary.";
-      setFeedback({ type: "error", message });
+      setMediaFeedback({ type: "error", message });
     } finally {
       setUploading(null);
     }
@@ -186,8 +194,11 @@ function WebsiteSettingsPage() {
         setDoc(doc(getFirebaseDb(), ...MEDIA_DOCUMENT), { ...cloudinary, updatedAt: serverTimestamp() }, { merge: true }),
       ]);
       setFeedback({ type: "success", message: "Website settings saved." });
+      setMediaFeedback({ type: "success", message: "Website settings and image URLs saved." });
     } catch (error) {
-      setFeedback({ type: "error", message: error instanceof Error ? error.message : "Could not save website settings." });
+      const message = error instanceof Error ? error.message : "Could not save website settings.";
+      setFeedback({ type: "error", message });
+      setMediaFeedback({ type: "error", message });
     } finally {
       setSaving(false);
     }
@@ -299,7 +310,8 @@ function WebsiteSettingsPage() {
 
         <section className="rounded-sm border border-[#d7c2a6] bg-[#f7f2e8] p-5 text-[#171512] shadow-sm">
           <h2 className="font-display text-xl text-[#171512]">Media & Branding</h2>
-          <p className="mt-2 max-w-3xl text-sm leading-relaxed text-[#5e554d]">Image uploads use Cloudinary’s free plan. In the <a className="underline underline-offset-2" href="https://console.cloudinary.com/" target="_blank" rel="noreferrer">Cloudinary console</a>, create an unsigned preset restricted to JPG, PNG, WebP, and GIF (and disable public ID overrides). Enter your cloud name and preset below, then Save Changes before uploading. The free plan has monthly usage limits.</p>
+          <p className="mt-2 max-w-3xl text-sm leading-relaxed text-[#5e554d]">Image uploads use Cloudinary’s free plan. In the <a className="underline underline-offset-2" href="https://console.cloudinary.com/" target="_blank" rel="noreferrer">Cloudinary console</a>, select or create an upload preset with Signing Mode set to Unsigned, restrict it to JPG, PNG, WebP, and GIF, and disable public ID overrides. Enter your cloud name and unsigned preset below, then save before uploading. The free plan has monthly usage limits.</p>
+          {mediaFeedback && <p role="status" className={`mt-4 text-sm ${mediaFeedback.type === "error" ? "text-red-700" : "text-green-800"}`}>{mediaFeedback.message}</p>}
           <div className="mt-4 grid gap-4 md:grid-cols-2">
             <Field label="Cloudinary Cloud Name">
               <input value={cloudinary.cloudName} onChange={(event) => setCloudinary((current) => ({ ...current, cloudName: event.target.value }))} placeholder="your-cloud-name" autoComplete="off" className="w-full rounded-sm border border-[#d7c2a6] bg-white/80 px-3 py-2.5 text-sm text-[#171512] outline-none placeholder:text-[#6d655f] focus:border-[#c79f5b]" />
@@ -311,6 +323,11 @@ function WebsiteSettingsPage() {
             <ImageField label="Hero Image URL" field="heroImageUrl" value={settings.heroImageUrl} uploading={uploading === "heroImageUrl"} onChange={(value) => updateField("heroImageUrl", value)} onChoose={(file) => void uploadImage("heroImageUrl", file)} />
             <ImageField label="Service Image URL" field="serviceImageUrl" value={settings.serviceImageUrl} uploading={uploading === "serviceImageUrl"} onChange={(value) => updateField("serviceImageUrl", value)} onChoose={(file) => void uploadImage("serviceImageUrl", file)} />
             <ImageField label="About Image URL" field="aboutImageUrl" value={settings.aboutImageUrl} uploading={uploading === "aboutImageUrl"} onChange={(value) => updateField("aboutImageUrl", value)} onChoose={(file) => void uploadImage("aboutImageUrl", file)} />
+          </div>
+          <div className="mt-5 flex justify-end">
+            <button type="button" onClick={() => void saveChanges()} disabled={saving || loading || Boolean(uploading)} className="inline-flex items-center gap-2 rounded-sm bg-[#d4ad6d] px-4 py-2.5 text-sm font-medium text-[#1a1715] hover:bg-[#c79f5b] disabled:cursor-not-allowed disabled:opacity-60">
+              <Save className="size-4" /> {saving ? "Saving…" : "Save Changes"}
+            </button>
           </div>
         </section>
 
