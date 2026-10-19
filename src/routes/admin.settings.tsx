@@ -13,6 +13,7 @@ type ServiceItem = {
 
 type WebsiteSettings = {
   brandName: string;
+  practitionerName: string;
   heroTitle: string;
   heroSubtitle: string;
   homepageDescription: string;
@@ -39,6 +40,7 @@ const MEDIA_DOCUMENT = ["settings", "media"] as const;
 
 const defaultSettings: WebsiteSettings = {
   brandName: "Shakuntla Malik",
+  practitionerName: "Shakuntla Malik",
   heroTitle: "Guidance rooted in tradition and clarity.",
   heroSubtitle: "Astrology consultations for life decisions, home harmony, and spiritual clarity.",
   homepageDescription:
@@ -236,6 +238,9 @@ function WebsiteSettingsPage() {
           <div className="grid gap-4 md:grid-cols-2">
             <Field label="Brand / Company Name">
               <input value={settings.brandName} onChange={(e) => updateField("brandName", e.target.value)} className="w-full rounded-sm border border-[#d7c2a6] bg-white/80 px-3 py-2.5 text-sm text-[#171512] outline-none placeholder:text-[#6d655f] focus:border-[#c79f5b]" />
+            </Field>
+            <Field label="Practitioner Name">
+              <input value={settings.practitionerName} onChange={(e) => updateField("practitionerName", e.target.value)} className="w-full rounded-sm border border-[#d7c2a6] bg-white/80 px-3 py-2.5 text-sm text-[#171512] outline-none placeholder:text-[#6d655f] focus:border-[#c79f5b]" />
             </Field>
             <Field label="Email">
               <input value={settings.companyEmail} onChange={(e) => updateField("companyEmail", e.target.value)} className="w-full rounded-sm border border-[#d7c2a6] bg-white/80 px-3 py-2.5 text-sm text-[#171512] outline-none placeholder:text-[#6d655f] focus:border-[#c79f5b]" />

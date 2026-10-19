@@ -36,7 +36,7 @@ export function About() {
             <p className="eyebrow text-terracotta">About</p>
           </Reveal>
           <h2 className="display mt-6 text-[clamp(2.3rem,5vw,4.25rem)]">
-              <RevealWords text={`Meet ${settings.brandName}`} />
+              <RevealWords text={`Meet ${settings?.practitionerName}`} />
           </h2>
 
           <Reveal delay={0.1}>

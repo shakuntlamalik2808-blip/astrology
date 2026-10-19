@@ -64,7 +64,6 @@ export function Navbar() {
             >
               <span className="flex items-center gap-2"><img src={settings.logoUrl} alt="" className="size-8 rounded-full object-cover" /><span className="block truncate">{settings.brandName}</span></span>
             </span>
-            <span className="eyebrow hidden text-gold/80 sm:inline">Jyotish</span>
           </a>
 
           <ul className="hidden items-center gap-8 lg:flex">
