@@ -19,6 +19,7 @@ const ADMIN_NUMBER = "919811840795";
 const RESEND_API_KEY = defineSecret("RESEND_API_KEY");
 const GEMINI_API_KEY = defineSecret("GEMINI_API_KEY");
 const REMEDY_EMAIL_FROM = defineString("REMEDY_EMAIL_FROM");
+const ADMIN_NOTIFICATION_EMAILS = defineString("ADMIN_NOTIFICATION_EMAILS", { default: "" });
 
 async function assertAdmin(request) {
   const email = request.auth?.token?.email;
@@ -169,15 +170,19 @@ async function sendBookingEmails(c) {
   const relationship = c.relationship || "Self";
   const birth = [c.dateOfBirth, c.timeOfBirth, c.placeOfBirth].filter(Boolean).join(" · ");
   const validUntil = c.validUntil || "the next birthday";
-  const userHtml = `<p>Dear ${escapeHtml(c.bookedByName || c.fullName)},</p><p>We received your consultation booking request.</p><p><b>Reference:</b> ${escapeHtml(c.consultationId)}<br><b>Consultation for:</b> ${escapeHtml(person)} (${escapeHtml(relationship)})<br><b>Birth details:</b> ${escapeHtml(birth)}<br><b>Consultation:</b> ${escapeHtml(c.consultationType)}<br><b>Appointment:</b> ${escapeHtml(c.preferredDate)} at ${escapeHtml(c.preferredTime)}</p><p>This consultation and its prescribed remedies are valid until the consulted person’s upcoming birthday: <b>${escapeHtml(validUntil)}</b>.</p><p>Warm regards,<br>Shakuntla Malik</p>`;
-  const adminHtml = `<p>A new consultation booking has been received.</p><p><b>Reference:</b> ${escapeHtml(c.consultationId)}<br><b>Customer:</b> ${escapeHtml(c.bookedByName || c.fullName)}<br><b>Email:</b> ${escapeHtml(c.email)}<br><b>Phone:</b> ${escapeHtml(c.whatsappNumber)}<br><b>Consultation for:</b> ${escapeHtml(person)} (${escapeHtml(relationship)})<br><b>Birth details:</b> ${escapeHtml(birth)}<br><b>Consultation:</b> ${escapeHtml(c.consultationType)}<br><b>Booked slot:</b> ${escapeHtml(c.preferredDate)} at ${escapeHtml(c.preferredTime)}</p><p><b>Validity through:</b> ${escapeHtml(validUntil)}</p><p>${escapeHtml(c.additionalMessage || "")}</p>`;
+  const userHtml = `<p>Dear ${escapeHtml(c.bookedByName || c.fullName)},</p><p>Your consultation booking and PhonePe payment are confirmed.</p><p><b>Reference:</b> ${escapeHtml(c.consultationId)}<br><b>Consultation for:</b> ${escapeHtml(person)} (${escapeHtml(relationship)})<br><b>Birth details:</b> ${escapeHtml(birth)}<br><b>Consultation:</b> ${escapeHtml(c.consultationType)}<br><b>Appointment:</b> ${escapeHtml(c.preferredDate)} at ${escapeHtml(c.preferredTime)}<br><b>Payment reference:</b> ${escapeHtml(c.phonePeTransactionId || c.paymentReference || "")}</p><p>This consultation and its prescribed remedies are valid until the consulted person’s upcoming birthday: <b>${escapeHtml(validUntil)}</b>.</p><p>Warm regards,<br>Shakuntla Malik</p>`;
+  const adminHtml = `<p>A new PhonePe-paid consultation booking has been confirmed.</p><p><b>Reference:</b> ${escapeHtml(c.consultationId)}<br><b>Customer:</b> ${escapeHtml(c.bookedByName || c.fullName)}<br><b>Email:</b> ${escapeHtml(c.email)}<br><b>Phone:</b> ${escapeHtml(c.whatsappNumber)}<br><b>Consultation for:</b> ${escapeHtml(person)} (${escapeHtml(relationship)})<br><b>Birth details:</b> ${escapeHtml(birth)}<br><b>Consultation:</b> ${escapeHtml(c.consultationType)}<br><b>Booked slot:</b> ${escapeHtml(c.preferredDate)} at ${escapeHtml(c.preferredTime)}<br><b>Paid:</b> ₹${escapeHtml(c.paymentAmount)}<br><b>PhonePe transaction:</b> ${escapeHtml(c.phonePeTransactionId || c.paymentReference || "")}</p><p><b>Validity through:</b> ${escapeHtml(validUntil)}</p><p>${escapeHtml(c.additionalMessage || "")}</p>`;
   const customerEmail = String(c.email || "").trim();
   const tasks = [dispatchBookingEmail({
     consultation: c, recipient: customerEmail, role: "customer", documentId: `${c.consultationId}_booking_email_customer`,
     subject: `Consultation booking received · ${c.consultationId}`, html: userHtml,
   })];
   const settings = await db.collection("settings").doc("admins").get();
-  const admins = [...new Set((Array.isArray(settings.data()?.emails) ? settings.data().emails : []).filter((email) => typeof email === "string" && email.includes("@")).map((email) => email.trim().toLowerCase()))];
+  const configuredAdmins = ADMIN_NOTIFICATION_EMAILS.value().split(",");
+  const admins = [...new Set([
+    ...(Array.isArray(settings.data()?.emails) ? settings.data().emails : []),
+    ...configuredAdmins,
+  ].filter((email) => typeof email === "string" && email.includes("@")).map((email) => email.trim().toLowerCase()))];
   if (!admins.length) {
     tasks.push(dispatchBookingEmail({ consultation: c, recipient: "", role: "admin", documentId: `${c.consultationId}_booking_email_admin`, subject: `New consultation booking · ${c.consultationId}`, html: adminHtml }));
   } else {
@@ -230,7 +235,7 @@ exports.onConsultationCreated = onDocumentCreated(
     }
 
     // Manual entries are already visible to the owner who created them.
-    if (c.source === "admin") return;
+    if (c.source === "admin" || c.source === "phonepe-conflict") return;
 
     await sendBookingEmails(c);
 
@@ -274,3 +279,5 @@ exports.onConsultationCreated = onDocumentCreated(
     }
   },
 );
+
+Object.assign(exports, require("./phonepe"));

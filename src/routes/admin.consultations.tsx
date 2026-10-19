@@ -83,7 +83,7 @@ const adminSchema = consultationSchema.extend({
   notes: z.string().max(3000, "Please keep notes under 3000 characters."),
   paymentStatus: z.enum(PAYMENT_STATUSES),
   paidAmount: z.coerce.number().finite().min(0, "Amount cannot be negative.").max(10000000, "Amount is too large."),
-  paymentMethod: z.enum(["", "Cash", "UPI", "Bank transfer", "Other"]),
+  paymentMethod: z.enum(["", "PhonePe", "Cash", "UPI", "Bank transfer", "Other"]),
   paymentReference: z.string().max(120, "Please keep the payment reference under 120 characters."),
   paymentDate: z.string().refine((value) => value === "" || /^\d{4}-\d{2}-\d{2}$/.test(value), "Enter a valid payment date."),
 });
@@ -136,7 +136,7 @@ function ConsultationsPage() {
       .filter((row) => (showArchived ? row.archived : !row.archived))
       .filter((row) => status === "All" || row.status === status)
       .filter((row) => type === "All" || row.consultationType === type)
-      .filter((row) => !term || [row.fullName, row.email, row.whatsappNumber, row.consultationId].some((value) => value?.toLowerCase().includes(term)))
+      .filter((row) => !term || [row.fullName, row.email, row.whatsappNumber, row.consultationId, row.phonePeTransactionId].some((value) => value?.toLowerCase().includes(term)))
       .sort((a, b) => {
         if (sort === "fullName") return a.fullName.localeCompare(b.fullName);
         if (sort === "preferredDate") return (a.preferredDate + a.preferredTime).localeCompare(b.preferredDate + b.preferredTime);
@@ -186,7 +186,7 @@ function ConsultationsPage() {
                 <td className="px-5 py-3">{formatDate(row.preferredDate)}</td>
                 <td className="px-5 py-3">{formatTime(row.preferredTime)}</td>
                 <td className="px-5 py-3"><StatusBadge status={row.status} /></td>
-                <td className="px-5 py-3"><span className={`rounded-full border px-2.5 py-1 text-xs ${row.paymentStatus === "Paid" ? "border-emerald-500/30 bg-emerald-500/10 text-emerald-700" : row.paymentStatus === "Partially paid" ? "border-amber-500/30 bg-amber-500/10 text-amber-700" : "border-border bg-muted text-muted-foreground"}`}>{row.paymentStatus ?? "Unpaid"}</span>{(row.paidAmount ?? 0) > 0 && <span className="ml-2 text-xs text-muted-foreground">₹{row.paidAmount}</span>}</td>
+                <td className="px-5 py-3"><span className={`rounded-full border px-2.5 py-1 text-xs ${row.paymentStatus === "Paid" ? "border-emerald-500/30 bg-emerald-500/10 text-emerald-700" : row.paymentStatus === "Partially paid" ? "border-amber-500/30 bg-amber-500/10 text-amber-700" : "border-border bg-muted text-muted-foreground"}`}>{row.paymentStatus ?? "Unpaid"}</span>{(row.paidAmount ?? 0) > 0 && <span className="ml-2 text-xs text-muted-foreground">₹{row.paidAmount}</span>}{row.phonePeTransactionId && <p className="mt-1 max-w-44 truncate text-xs text-muted-foreground" title={row.phonePeTransactionId}>PhonePe: {row.phonePeTransactionId}</p>}</td>
               </tr>
             ))}
             {rows && list.length === 0 && <tr><td colSpan={6} className="px-5 py-10 text-center text-muted-foreground">No matching consultations.</td></tr>}
@@ -359,9 +359,10 @@ function ConsultationForm({ mode, initial, row, onClose }: { mode: "create" | "e
         <FormSection title="Payment tracking">
           <FormField label="Payment status" error={errors.paymentStatus}><select value={form.paymentStatus} onChange={(event) => set("paymentStatus")(event.target.value)} className={inputClass}>{PAYMENT_STATUSES.map((item) => <option key={item}>{item}</option>)}</select></FormField>
           <FormField label="Amount received (₹)" error={errors.paidAmount}><input type="number" min="0" step="0.01" inputMode="decimal" value={form.paidAmount} onChange={(event) => set("paidAmount")(event.target.value)} className={inputClass} /></FormField>
-          <FormField label="Payment method" error={errors.paymentMethod}><select value={form.paymentMethod} onChange={(event) => set("paymentMethod")(event.target.value)} className={inputClass}><option value="">Not recorded</option><option>Cash</option><option>UPI</option><option>Bank transfer</option><option>Other</option></select></FormField>
+          <FormField label="Payment method" error={errors.paymentMethod}><select value={form.paymentMethod} onChange={(event) => set("paymentMethod")(event.target.value)} className={inputClass}><option value="">Not recorded</option><option>PhonePe</option><option>Cash</option><option>UPI</option><option>Bank transfer</option><option>Other</option></select></FormField>
           <FormField label="Payment date" error={errors.paymentDate}><input type="date" value={form.paymentDate} onChange={(event) => set("paymentDate")(event.target.value)} className={inputClass} /></FormField>
           <FormField label="Payment reference" error={errors.paymentReference} full><input placeholder="Optional transaction ID or receipt number" value={form.paymentReference} onChange={(event) => set("paymentReference")(event.target.value)} className={inputClass} /></FormField>
+          {row?.phonePeTransactionId && <FormField label="PhonePe transaction ID" full><input value={row.phonePeTransactionId} readOnly className={`${inputClass} opacity-75`} /></FormField>}
         </FormSection>
         {mode === "edit" && row && <RemediesEditor row={row} />}
       </div>

@@ -13,8 +13,11 @@ import { Route as IndexRouteImport } from './routes/index'
 import { Route as AdminRouteImport } from './routes/admin'
 import { Route as BookConsultationRouteImport } from './routes/book-consultation'
 import { Route as MyConsultationsRouteImport } from './routes/my-consultations'
+import { Route as PrivacyPolicyRouteImport } from './routes/privacy-policy'
 import { Route as ProfileRouteImport } from './routes/profile'
+import { Route as RefundPolicyRouteImport } from './routes/refund-policy'
 import { Route as SignInRouteImport } from './routes/sign-in'
+import { Route as TermsAndConditionsRouteImport } from './routes/terms-and-conditions'
 import { Route as AdminIndexRouteImport } from './routes/admin.index'
 import { Route as AdminAccountsRouteImport } from './routes/admin.accounts'
 import { Route as AdminAvailabilityRouteImport } from './routes/admin.availability'
@@ -24,6 +27,7 @@ import { Route as AdminReelsRouteImport } from './routes/admin.reels'
 import { Route as AdminSettingsRouteImport } from './routes/admin.settings'
 import { Route as AdminWhatsappRouteImport } from './routes/admin.whatsapp'
 import { Route as AdminLoginRouteImport } from './routes/admin_.login'
+import { Route as PaymentReturnRouteImport } from './routes/payment.return'
 
 const IndexRoute = IndexRouteImport.update({
   id: '/',
@@ -45,14 +49,29 @@ const MyConsultationsRoute = MyConsultationsRouteImport.update({
   path: '/my-consultations',
   getParentRoute: () => rootRouteImport,
 } as any)
+const PrivacyPolicyRoute = PrivacyPolicyRouteImport.update({
+  id: '/privacy-policy',
+  path: '/privacy-policy',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const ProfileRoute = ProfileRouteImport.update({
   id: '/profile',
   path: '/profile',
   getParentRoute: () => rootRouteImport,
 } as any)
+const RefundPolicyRoute = RefundPolicyRouteImport.update({
+  id: '/refund-policy',
+  path: '/refund-policy',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const SignInRoute = SignInRouteImport.update({
   id: '/sign-in',
   path: '/sign-in',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const TermsAndConditionsRoute = TermsAndConditionsRouteImport.update({
+  id: '/terms-and-conditions',
+  path: '/terms-and-conditions',
   getParentRoute: () => rootRouteImport,
 } as any)
 const AdminIndexRoute = AdminIndexRouteImport.update({
@@ -100,14 +119,22 @@ const AdminLoginRoute = AdminLoginRouteImport.update({
   path: '/admin/login',
   getParentRoute: () => rootRouteImport,
 } as any)
+const PaymentReturnRoute = PaymentReturnRouteImport.update({
+  id: '/payment/return',
+  path: '/payment/return',
+  getParentRoute: () => rootRouteImport,
+} as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
   '/admin': typeof AdminRouteWithChildren
   '/book-consultation': typeof BookConsultationRoute
   '/my-consultations': typeof MyConsultationsRoute
+  '/privacy-policy': typeof PrivacyPolicyRoute
   '/profile': typeof ProfileRoute
+  '/refund-policy': typeof RefundPolicyRoute
   '/sign-in': typeof SignInRoute
+  '/terms-and-conditions': typeof TermsAndConditionsRoute
   '/admin/accounts': typeof AdminAccountsRoute
   '/admin/availability': typeof AdminAvailabilityRoute
   '/admin/consultations': typeof AdminConsultationsRoute
@@ -116,14 +143,18 @@ export interface FileRoutesByFullPath {
   '/admin/settings': typeof AdminSettingsRoute
   '/admin/whatsapp': typeof AdminWhatsappRoute
   '/admin/login': typeof AdminLoginRoute
+  '/payment/return': typeof PaymentReturnRoute
   '/admin/': typeof AdminIndexRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/book-consultation': typeof BookConsultationRoute
   '/my-consultations': typeof MyConsultationsRoute
+  '/privacy-policy': typeof PrivacyPolicyRoute
   '/profile': typeof ProfileRoute
+  '/refund-policy': typeof RefundPolicyRoute
   '/sign-in': typeof SignInRoute
+  '/terms-and-conditions': typeof TermsAndConditionsRoute
   '/admin/accounts': typeof AdminAccountsRoute
   '/admin/availability': typeof AdminAvailabilityRoute
   '/admin/consultations': typeof AdminConsultationsRoute
@@ -132,6 +163,7 @@ export interface FileRoutesByTo {
   '/admin/settings': typeof AdminSettingsRoute
   '/admin/whatsapp': typeof AdminWhatsappRoute
   '/admin/login': typeof AdminLoginRoute
+  '/payment/return': typeof PaymentReturnRoute
   '/admin': typeof AdminIndexRoute
 }
 export interface FileRoutesById {
@@ -140,8 +172,11 @@ export interface FileRoutesById {
   '/admin': typeof AdminRouteWithChildren
   '/book-consultation': typeof BookConsultationRoute
   '/my-consultations': typeof MyConsultationsRoute
+  '/privacy-policy': typeof PrivacyPolicyRoute
   '/profile': typeof ProfileRoute
+  '/refund-policy': typeof RefundPolicyRoute
   '/sign-in': typeof SignInRoute
+  '/terms-and-conditions': typeof TermsAndConditionsRoute
   '/admin/accounts': typeof AdminAccountsRoute
   '/admin/availability': typeof AdminAvailabilityRoute
   '/admin/consultations': typeof AdminConsultationsRoute
@@ -150,6 +185,7 @@ export interface FileRoutesById {
   '/admin/settings': typeof AdminSettingsRoute
   '/admin/whatsapp': typeof AdminWhatsappRoute
   '/admin_/login': typeof AdminLoginRoute
+  '/payment/return': typeof PaymentReturnRoute
   '/admin/': typeof AdminIndexRoute
 }
 export interface FileRouteTypes {
@@ -159,8 +195,11 @@ export interface FileRouteTypes {
     | '/admin'
     | '/book-consultation'
     | '/my-consultations'
+    | '/privacy-policy'
     | '/profile'
+    | '/refund-policy'
     | '/sign-in'
+    | '/terms-and-conditions'
     | '/admin/accounts'
     | '/admin/availability'
     | '/admin/consultations'
@@ -169,14 +208,18 @@ export interface FileRouteTypes {
     | '/admin/settings'
     | '/admin/whatsapp'
     | '/admin/login'
+    | '/payment/return'
     | '/admin/'
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
     | '/book-consultation'
     | '/my-consultations'
+    | '/privacy-policy'
     | '/profile'
+    | '/refund-policy'
     | '/sign-in'
+    | '/terms-and-conditions'
     | '/admin/accounts'
     | '/admin/availability'
     | '/admin/consultations'
@@ -185,6 +228,7 @@ export interface FileRouteTypes {
     | '/admin/settings'
     | '/admin/whatsapp'
     | '/admin/login'
+    | '/payment/return'
     | '/admin'
   id:
     | '__root__'
@@ -192,8 +236,11 @@ export interface FileRouteTypes {
     | '/admin'
     | '/book-consultation'
     | '/my-consultations'
+    | '/privacy-policy'
     | '/profile'
+    | '/refund-policy'
     | '/sign-in'
+    | '/terms-and-conditions'
     | '/admin/accounts'
     | '/admin/availability'
     | '/admin/consultations'
@@ -202,6 +249,7 @@ export interface FileRouteTypes {
     | '/admin/settings'
     | '/admin/whatsapp'
     | '/admin_/login'
+    | '/payment/return'
     | '/admin/'
   fileRoutesById: FileRoutesById
 }
@@ -210,9 +258,13 @@ export interface RootRouteChildren {
   AdminRoute: typeof AdminRouteWithChildren
   BookConsultationRoute: typeof BookConsultationRoute
   MyConsultationsRoute: typeof MyConsultationsRoute
+  PrivacyPolicyRoute: typeof PrivacyPolicyRoute
   ProfileRoute: typeof ProfileRoute
+  RefundPolicyRoute: typeof RefundPolicyRoute
   SignInRoute: typeof SignInRoute
+  TermsAndConditionsRoute: typeof TermsAndConditionsRoute
   AdminLoginRoute: typeof AdminLoginRoute
+  PaymentReturnRoute: typeof PaymentReturnRoute
 }
 
 declare module '@tanstack/react-router' {
@@ -245,6 +297,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof MyConsultationsRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/privacy-policy': {
+      id: '/privacy-policy'
+      path: '/privacy-policy'
+      fullPath: '/privacy-policy'
+      preLoaderRoute: typeof PrivacyPolicyRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/profile': {
       id: '/profile'
       path: '/profile'
@@ -252,11 +311,25 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ProfileRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/refund-policy': {
+      id: '/refund-policy'
+      path: '/refund-policy'
+      fullPath: '/refund-policy'
+      preLoaderRoute: typeof RefundPolicyRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/sign-in': {
       id: '/sign-in'
       path: '/sign-in'
       fullPath: '/sign-in'
       preLoaderRoute: typeof SignInRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/terms-and-conditions': {
+      id: '/terms-and-conditions'
+      path: '/terms-and-conditions'
+      fullPath: '/terms-and-conditions'
+      preLoaderRoute: typeof TermsAndConditionsRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/admin/': {
@@ -322,6 +395,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AdminLoginRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/payment/return': {
+      id: '/payment/return'
+      path: '/payment/return'
+      fullPath: '/payment/return'
+      preLoaderRoute: typeof PaymentReturnRouteImport
+      parentRoute: typeof rootRouteImport
+    }
   }
 }
 
@@ -354,9 +434,13 @@ const rootRouteChildren: RootRouteChildren = {
   AdminRoute: AdminRouteWithChildren,
   BookConsultationRoute: BookConsultationRoute,
   MyConsultationsRoute: MyConsultationsRoute,
+  PrivacyPolicyRoute: PrivacyPolicyRoute,
   ProfileRoute: ProfileRoute,
+  RefundPolicyRoute: RefundPolicyRoute,
   SignInRoute: SignInRoute,
+  TermsAndConditionsRoute: TermsAndConditionsRoute,
   AdminLoginRoute: AdminLoginRoute,
+  PaymentReturnRoute: PaymentReturnRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)

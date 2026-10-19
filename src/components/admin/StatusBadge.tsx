@@ -7,6 +7,7 @@ const styles: Record<string, string> = {
   Completed: "bg-muted text-muted-foreground border-border",
   Cancelled: "bg-terracotta/15 text-terracotta border-terracotta/50",
   "Follow-up Required": "bg-terracotta/10 text-foreground border-terracotta/40",
+  "Payment Review": "bg-amber-500/15 text-amber-800 border-amber-500/40",
   Sent: "bg-primary/15 text-foreground border-primary/50",
   Pending: "bg-gold/20 text-foreground border-gold/60",
   Failed: "bg-terracotta/15 text-terracotta border-terracotta/50",

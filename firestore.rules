@@ -9,44 +9,10 @@ service cloud.firestore {
         && request.auth.token.email is string
         && request.auth.token.email.lower() in get(/databases/$(database)/documents/settings/admins).data.emails;
     }
-    function str(v, min, max) { return v is string && v.size() >= min && v.size() <= max; }
-    function slotId(v) { return v.preferredDate + '_' + v.preferredTime; }
-
     match /consultations/{id} {
-      allow read, update, delete: if isAdmin();
-      allow create: if isAdmin();
-      allow create: if !isAdmin()
-        && request.auth != null
-        && request.resource.data.userId == request.auth.uid
-        && request.resource.data.customerId == request.auth.uid
-        && id == request.resource.data.consultationId
-        && request.resource.data.keys().hasOnly([
-          'consultationId','fullName','whatsappNumber','email','dateOfBirth','timeOfBirth',
-          'placeOfBirth','consultationType','preferredDate','preferredTime','memberId','memberName',
-          'relationship','validFrom','validUntil','bookedByName','additionalMessage','source','status','createdAt',
-          'updatedAt','userId','customerId'
-        ])
-        && str(request.resource.data.fullName, 2, 100)
-        && request.resource.data.whatsappNumber.matches('^\\+[0-9]{7,18}$')
-        && request.resource.data.email is string
-        && (request.resource.data.email == '' || request.resource.data.email.matches('^[^@\\s]+@[^@\\s]+\\.[^@\\s]+$'))
-        && str(request.resource.data.placeOfBirth, 2, 120)
-        && str(request.resource.data.memberId, 1, 100)
-        && str(request.resource.data.memberName, 2, 100)
-        && str(request.resource.data.bookedByName, 2, 100)
-        && request.resource.data.relationship in ['Self','Spouse','Child','Parent','Friend','Other']
-        && str(request.resource.data.validFrom, 10, 10)
-        && str(request.resource.data.validUntil, 10, 10)
-        && str(request.resource.data.consultationType, 2, 100)
-        && str(request.resource.data.preferredDate, 10, 10)
-        && str(request.resource.data.preferredTime, 4, 8)
-        && str(request.resource.data.additionalMessage, 0, 1500)
-        && request.resource.data.source == 'website'
-        && request.resource.data.status == 'New'
-        && request.resource.data.createdAt == request.time
-        && get(/databases/$(database)/documents/availableSlots/$(slotId(request.resource.data))).data.enabled == true
-        && getAfter(/databases/$(database)/documents/bookedSlots/$(slotId(request.resource.data))).data.consultationId == id;
-      allow read: if request.auth != null && resource.data.userId == request.auth.uid;
+      allow read: if isAdmin() || (request.auth != null && resource.data.userId == request.auth.uid);
+      // Customer bookings are created only by the payment-verifying Cloud Function.
+      allow create, update, delete: if isAdmin();
     }
     match /customers/{uid} {
       allow read: if isAdmin() || (request.auth != null && request.auth.uid == uid);
@@ -60,14 +26,10 @@ service cloud.firestore {
     match /availableSlots/{id} { allow read: if true; allow write: if isAdmin(); }
     match /bookedSlots/{id} {
       allow read: if true;
-      allow create: if isAdmin() || (!isAdmin()
-        && request.resource.data.keys().hasOnly(['date','time','consultationId'])
-        && id == request.resource.data.date + '_' + request.resource.data.time
-        && get(/databases/$(database)/documents/availableSlots/$(id)).data.enabled == true
-        && getAfter(/databases/$(database)/documents/consultations/$(request.resource.data.consultationId)).data.preferredDate == request.resource.data.date
-        && getAfter(/databases/$(database)/documents/consultations/$(request.resource.data.consultationId)).data.preferredTime == request.resource.data.time);
-      allow update, delete: if isAdmin();
+      allow create, update, delete: if isAdmin();
     }
+    match /phonePePayments/{id} { allow read, write: if false; }
+    match /slotReservations/{id} { allow read, write: if false; }
     match /settings/admins { allow read: if request.auth != null; allow write: if false; }
     match /settings/{id} { allow read: if isAdmin() || id == 'website'; allow write: if isAdmin() && id != 'admins'; }
   }

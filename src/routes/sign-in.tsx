@@ -1,5 +1,5 @@
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
-import { useEffect, useState, type FormEvent } from "react";
+import { useCallback, useEffect, useState, type FormEvent } from "react";
 import { z } from "zod";
 import { Navbar } from "@/components/site/Navbar";
 import { Footer } from "@/components/site/Footer";
@@ -7,7 +7,7 @@ import { COUNTRY_CODES } from "@/lib/consultations";
 import { customerRegisterWithEmail, customerSignIn, customerSignInWithEmail, useCustomerAuth } from "@/lib/customer-auth";
 
 export const Route = createFileRoute("/sign-in")({
-  validateSearch: z.object({ returnTo: z.string().optional() }),
+  validateSearch: z.object({ returnTo: z.string().optional(), merchantOrderId: z.string().optional() }),
   component: SignInPage,
 });
 
@@ -16,7 +16,7 @@ const empty = { name: "", email: "", countryCode: "+91", phone: "", password: ""
 const inputClass = "mt-2 min-h-12 w-full rounded-sm border border-ivory/20 bg-ink/60 px-4 text-base text-ivory placeholder:text-ivory/35 focus:border-gold focus:outline-none focus:ring-1 focus:ring-gold/60 [color-scheme:dark]";
 
 function SignInPage() {
-  const { returnTo } = Route.useSearch();
+  const { returnTo, merchantOrderId } = Route.useSearch();
   const navigate = useNavigate();
   const { user, loading: authLoading } = useCustomerAuth();
   const [mode, setMode] = useState<Mode>("sign-in");
@@ -24,10 +24,17 @@ function SignInPage() {
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
   const destination = returnTo === "/book-consultation" ? "/book-consultation" : "/my-consultations";
+  const navigateAfterSignIn = useCallback(() => {
+    if (returnTo === "/payment/return" && merchantOrderId && /^SS-[0-9]+-[a-f0-9]{12}$/.test(merchantOrderId)) {
+      void navigate({ to: "/payment/return", search: { merchantOrderId }, replace: true });
+      return;
+    }
+    void navigate({ to: destination, replace: true });
+  }, [destination, merchantOrderId, navigate, returnTo]);
 
   useEffect(() => {
-    if (user) navigate({ to: destination, replace: true });
-  }, [user, destination, navigate]);
+    if (user) navigateAfterSignIn();
+  }, [user, navigateAfterSignIn]);
 
   const set = (key: keyof typeof empty) => (value: string) => setValues((current) => ({ ...current, [key]: value }));
 
@@ -56,14 +63,14 @@ function SignInPage() {
           birthDetails: { dateOfBirth: values.dateOfBirth, timeOfBirth: values.timeOfBirth, placeOfBirth: values.placeOfBirth },
         });
       }
-      navigate({ to: destination, replace: true });
+      navigateAfterSignIn();
     } catch (cause) { setError(message(cause)); }
     finally { setBusy(false); }
   }
 
   async function googleSignIn() {
     setBusy(true); setError("");
-    try { await customerSignIn(); navigate({ to: destination, replace: true }); }
+    try { await customerSignIn(); navigateAfterSignIn(); }
     catch (cause) { setError(message(cause)); }
     finally { setBusy(false); }
   }

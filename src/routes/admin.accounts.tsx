@@ -145,7 +145,7 @@ function AccountsPage() {
       <div>
         <p className="eyebrow text-gold">Admin accounts</p>
         <h1 className="display mt-2 text-3xl">Payments</h1>
-        <p className="mt-2 text-sm text-muted-foreground">Track payments recorded manually for consultation bookings.</p>
+        <p className="mt-2 text-sm text-muted-foreground">Track PhonePe-verified and manually recorded consultation payments.</p>
       </div>
 
       {error && <p role="alert" className="mt-4 text-sm text-destructive">{error}</p>}

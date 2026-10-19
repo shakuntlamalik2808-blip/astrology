@@ -9,19 +9,18 @@ import {
   COUNTRY_CODES,
   bookingErrorDetails,
   bookingSlotId,
-  calculateBirthdayValidity,
   consultationSchema,
   formatDate,
   formatTime,
   logBookingDebug,
-  submitConsultation,
   type ConsultationInput,
 } from "@/lib/consultations";
 import { getMissingFirebaseConfigKeys, isFirebaseConfigured } from "@/lib/firebase-config";
-import { getFirebaseDb } from "@/lib/firebase";
+import { getFirebaseApp, getFirebaseDb } from "@/lib/firebase";
 import { useWebsiteSettings, WebsiteSettingsProvider } from "@/lib/website-settings";
 import { useCustomerAuth, saveCustomerMembers, saveCustomerProfile, type CustomerMember } from "@/lib/customer-auth";
 import { doc, getDoc } from "firebase/firestore";
+import { getFunctions, httpsCallable } from "firebase/functions";
 
 const title = "Book a Consultation — Shakuntla Malik";
 const description =
@@ -86,6 +85,7 @@ function BookPage() {
   const submitLock = useRef(false);
   const submitErrorRef = useRef<HTMLParagraphElement>(null);
   const [values, setValues] = useState<ConsultationInput>(empty);
+  const selectedService = settings.services.find((service) => service.name === values.consultationType);
   const [savedProfile, setSavedProfile] = useState<{ name: string; birthDetails: { dateOfBirth?: string; timeOfBirth?: string; placeOfBirth?: string } } | null>(null);
   const [members, setMembers] = useState<CustomerMember[]>([]);
   const [selectedMemberId, setSelectedMemberId] = useState("self");
@@ -119,7 +119,7 @@ function BookPage() {
   const [submitting, setSubmitting] = useState(false);
   const [submitError, setSubmitError] = useState<string | null>(null);
   const [submitErrorSequence, setSubmitErrorSequence] = useState(0);
-  const [done, setDone] = useState<{ id: string; firstName: string } | null>(null);
+  const [done, setDone] = useState<{ id: string; firstName: string; redirectUrl: string } | null>(null);
   const [availableSlots, setAvailableSlots] = useState<{ id: string; date: string; time: string }[]>([]);
   const [bookedSlotIds, setBookedSlotIds] = useState<Set<string>>(new Set());
   const [availabilityLoading, setAvailabilityLoading] = useState(true);
@@ -315,7 +315,6 @@ function BookPage() {
         await saveCustomerMembers(user, updatedMembers);
         setMembers(updatedMembers);
       }
-      const validity = calculateBirthdayValidity(parsed.data.dateOfBirth, parsed.data.preferredDate);
       await saveCustomerProfile(user, {
         name: savedProfile?.name || parsed.data.fullName,
         phone: `${parsed.data.countryCode}${parsed.data.phone}`,
@@ -325,14 +324,31 @@ function BookPage() {
           placeOfBirth: savedProfile?.birthDetails.placeOfBirth || "",
         },
       });
-      const id = await submitConsultation(parsed.data, user.uid, {
-        memberId, memberName: parsed.data.fullName, relationship,
+      const booking = {
+        fullName: parsed.data.fullName,
+        whatsappNumber: `${parsed.data.countryCode}${parsed.data.phone}`,
+        email: parsed.data.email.toLowerCase(),
+        dateOfBirth: parsed.data.dateOfBirth,
+        timeOfBirth: parsed.data.timeOfBirth ?? "",
+        placeOfBirth: parsed.data.placeOfBirth,
+        consultationType: parsed.data.consultationType,
+        preferredDate: parsed.data.preferredDate,
+        preferredTime: parsed.data.preferredTime,
+        memberId,
+        memberName: parsed.data.fullName,
+        relationship,
         bookedByName: savedProfile?.name || user.displayName || parsed.data.fullName,
-        validFrom: validity.validFrom, validUntil: validity.validUntil,
-      });
-      logBookingDebug("log", "form_submission_success", { referenceId: id, slotId: selectedSlotId });
-      setDone({ id, firstName: parsed.data.fullName.split(" ")[0] ?? "" });
-      window.scrollTo({ top: 0, behavior: reduced ? "auto" : "smooth" });
+        additionalMessage: parsed.data.additionalMessage,
+      };
+      const createOrder = httpsCallable<{ booking: typeof booking }, { consultationId: string; redirectUrl: string }>(
+        getFunctions(getFirebaseApp(), "asia-south1"),
+        "createPhonePeOrder",
+      );
+      const order = await createOrder({ booking });
+      const { consultationId, redirectUrl } = order.data;
+      logBookingDebug("log", "phonepe_checkout_created", { referenceId: consultationId, slotId: selectedSlotId });
+      setDone({ id: consultationId, firstName: parsed.data.fullName.split(" ")[0] ?? "", redirectUrl });
+      window.location.assign(redirectUrl);
     } catch (err) {
       logBookingDebug("error", "form_submission_failed", {
         slotId: selectedSlotId,
@@ -376,14 +392,14 @@ function BookPage() {
         <Starfield count={40} />
         <div className="relative mx-auto max-w-3xl px-4 sm:px-6">
           <AnimatePresence mode="wait">
-            {done ? (
+          {done ? (
               <motion.div key="done" {...fade} className="text-center">
-                <p className="eyebrow text-gold">Request received</p>
-                <h1 className="display mt-6 text-4xl md:text-5xl">Consultation Request Received</h1>
+                <p className="eyebrow text-gold">Secure payment</p>
+                <h1 className="display mt-6 text-4xl md:text-5xl">Continue to PhonePe</h1>
                 <p className="mt-6 text-lg text-ivory/80">Thank you, {done.firstName}.</p>
                 <p className="mx-auto mt-3 max-w-xl text-ivory/65">
-                  Your consultation request has been received successfully. We'll review your details and contact
-                  you shortly on WhatsApp regarding your preferred consultation time.
+                  Your appointment will be confirmed after PhonePe verifies your payment. If you are not redirected,
+                  use the secure checkout button below to continue.
                 </p>
                 <dl className="mx-auto mt-10 grid max-w-xl gap-px overflow-hidden rounded-sm border border-ivory/15 bg-ivory/15 text-left sm:grid-cols-2">
                   {[
@@ -399,6 +415,9 @@ function BookPage() {
                   ))}
                 </dl>
                 <div className="mt-10 flex flex-wrap justify-center gap-4">
+                  <a href={done.redirectUrl} className="inline-flex min-h-12 items-center rounded-sm bg-gold px-7 text-[0.76rem] font-medium uppercase tracking-[0.14em] text-ink transition-colors duration-200 hover:bg-gold-soft">
+                    Open Secure Checkout
+                  </a>
                   <Link to="/" className="inline-flex min-h-12 items-center rounded-sm bg-gold px-7 text-[0.76rem] font-medium uppercase tracking-[0.14em] text-ink transition-colors duration-200 hover:bg-gold-soft">
                     Back to Home
                   </Link>
@@ -478,10 +497,11 @@ function BookPage() {
                     <Field id="consultationType" label="Consultation type" error={errors.consultationType} full>
                       <select id="f-consultationType" value={values.consultationType} onChange={(e) => set("consultationType")(e.target.value)} className={inputCls}>
                         <option value="" className="bg-ink">Choose a consultation</option>
-                        {[...new Set([...settings.services.map((service) => service.name), "General Consultation"])].map((t) => (
+                        {[...new Set(settings.services.map((service) => service.name))].map((t) => (
                           <option key={t} value={t} className="bg-ink">{t}</option>
                         ))}
                       </select>
+                      {selectedService && <p className="mt-2 text-sm text-gold-soft">Consultation fee: {selectedService.price}</p>}
                     </Field>
                     <Field id="preferredDate" label="Preferred date" error={errors.preferredDate}>
                       <select id="f-preferredDate" value={values.preferredDate} onChange={(e) => { set("preferredDate")(e.target.value); set("preferredTime")(""); }} disabled={scheduleLoading || Boolean(scheduleError) || availableDates.length === 0} className={`${inputCls} disabled:opacity-50`}>
@@ -517,7 +537,7 @@ function BookPage() {
 
                   <button
                     type="submit"
-                    disabled={submitting || !user}
+                    disabled={submitting || !user || !selectedService}
                     onClick={() => logBookingDebug("log", "submit_button_clicked", {
                       values: formValuesForDebug(values),
                       validationErrorFields: Object.keys(errors),
@@ -528,7 +548,7 @@ function BookPage() {
                     className="mt-10 inline-flex min-h-14 w-full items-center justify-center gap-3 rounded-sm bg-gold px-8 text-[0.78rem] font-medium uppercase tracking-[0.14em] text-ink transition-colors duration-200 hover:bg-gold-soft focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-gold disabled:cursor-not-allowed disabled:opacity-70 md:w-auto"
                   >
                     {submitting && <span className="size-4 animate-spin rounded-full border-2 border-ink/30 border-t-ink" aria-hidden />}
-                    {submitting ? "Submitting..." : "Submit Consultation Request"}
+                    {submitting ? "Preparing secure checkout…" : selectedService ? `Pay ${selectedService.price} with PhonePe & Book` : "Choose a priced consultation"}
                   </button>
                 </motion.form>
               </motion.div>

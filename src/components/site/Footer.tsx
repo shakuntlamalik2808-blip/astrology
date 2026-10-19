@@ -10,6 +10,9 @@ const nav = [
   { label: "About", href: "/#about" },
   { label: "Contact", href: "/#footer" },
   { label: "Book", href: "/book-consultation" },
+  { label: "Privacy Policy", href: "/privacy-policy" },
+  { label: "Terms & Conditions", href: "/terms-and-conditions" },
+  { label: "Refund Policy", href: "/refund-policy" },
 ];
 
 const social = ["Instagram", "Facebook", "YouTube"];

@@ -51,6 +51,7 @@ export const STATUSES = [
   "Completed",
   "Cancelled",
   "Follow-up Required",
+  "Payment Review",
 ] as const;
 export type ConsultationStatus = (typeof STATUSES)[number];
 
@@ -105,6 +106,11 @@ export type Consultation = {
   paymentMethod?: string;
   paymentReference?: string;
   paymentDate?: string;
+  paymentAmount?: number;
+  paymentAmountPaise?: number;
+  phonePeMerchantOrderId?: string;
+  phonePeTransactionId?: string;
+  paidAt?: Timestamp;
   notes?: string;
   archived?: boolean;
   customerId?: string;
