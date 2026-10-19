@@ -26,7 +26,7 @@ import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { httpsCallable } from "firebase/functions";
 import { getFunctions } from "firebase/functions";
-import { Mic, MicOff, Download, Mail, Languages } from "lucide-react";
+import { Mic, MicOff, Download, Mail } from "lucide-react";
 
 export const Route = createFileRoute("/admin/consultations")({
   head: () => ({
@@ -441,17 +441,6 @@ function RemediesEditor({ row }: { row: Row }) {
     finally { setBusy(false); }
   }
 
-  async function translate() {
-    if (!await saveDraft()) return;
-    setBusy(true); setNotice("");
-    try {
-      const callable = httpsCallable<{ consultationId: string }, { text: string }>(getFunctions(getFirebaseApp(), "asia-south1"), "translateRemedies");
-      const result = await callable({ consultationId: row.id });
-      setEnglish(result.data.text); setLanguage("English"); setNotice("English draft created. Review and edit it before sending.");
-    } catch (cause) { setNotice((cause as Error).message || "Translation could not be created."); }
-    finally { setBusy(false); }
-  }
-
   function preview() {
     const content = selected;
     const safe = (value: string) => value.replace(/[&<>"']/g, (char) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" })[char]!);
@@ -484,7 +473,6 @@ function RemediesEditor({ row }: { row: Row }) {
       </div>
       {language === "Hindi" ? <label className="block text-xs text-muted-foreground">Hindi remedies<textarea rows={7} lang="hi" value={hindi} onChange={(event) => setHindi(event.target.value)} className={`${inputClass} h-auto py-3`} placeholder="उपाय यहाँ लिखें या हिंदी में बोलें…" /></label> : <label className="block text-xs text-muted-foreground">English remedies draft<textarea rows={7} value={english} onChange={(event) => setEnglish(event.target.value)} className={`${inputClass} h-auto py-3`} placeholder="Review and edit the English version here…" /></label>}
       {recording && interim && <p aria-live="polite" className="rounded-sm border border-gold/40 bg-muted/40 p-3 text-sm text-muted-foreground">Listening: {interim}</p>}
-      {language === "English" && <Button type="button" variant="outline" disabled={busy || !hindi.trim()} onClick={translate}><Languages className="mr-2 size-4" />Translate / Format to English</Button>}
       <div className="flex flex-wrap gap-2"><Button type="button" variant="outline" disabled={busy} onClick={() => void saveDraft()}>Save remedies</Button><Button type="button" variant="outline" disabled={busy || !selected.trim()} onClick={preview}><Download className="mr-2 size-4" />Preview / Download PDF</Button><Button type="button" disabled={busy || !row.email || !selected.trim()} onClick={() => void sendEmail()}><Mail className="mr-2 size-4" />Send Remedies PDF via Email</Button></div>
       {!row.email && <p className="text-xs text-muted-foreground">Add a customer email address to enable email delivery.</p>}
       {row.remediesSentAt && <p className="text-xs text-muted-foreground">Last sent: {row.remediesSentAt.toDate().toLocaleString("en-IN")}</p>}

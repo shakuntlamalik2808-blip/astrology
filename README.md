@@ -64,12 +64,11 @@ A private, unlisted administration area manages the site's day-to-day operations
 The consultation editor includes Hindi (`hi-IN`) dictation, editable Hindi and
 English remedies, a print-ready branded preview, and an email flow that attaches
 a server-generated PDF with embedded Noto Sans fonts for Devanagari and Latin.
-The English draft uses the Gemini API and requires review before sending.
+English remedies are entered and edited manually.
 
 Configure the Functions secrets and sender before deploying:
 
 ```sh
-firebase functions:secrets:set GEMINI_API_KEY
 firebase functions:secrets:set RESEND_API_KEY
 ```
 

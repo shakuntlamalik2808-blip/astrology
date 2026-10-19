@@ -1,13 +1,11 @@
 const crypto = require("crypto");
 const { defineSecret, defineString } = require("firebase-functions/params");
-const { onCall, onRequest, HttpsError } = require("firebase-functions/v2/https");
+const { onCall, HttpsError } = require("firebase-functions/v2/https");
 const { getFirestore, FieldValue, Timestamp } = require("firebase-admin/firestore");
 
 const db = getFirestore();
 const PHONEPE_CLIENT_ID = defineSecret("PHONEPE_CLIENT_ID");
 const PHONEPE_CLIENT_SECRET = defineSecret("PHONEPE_CLIENT_SECRET");
-const PHONEPE_WEBHOOK_USERNAME = defineSecret("PHONEPE_WEBHOOK_USERNAME");
-const PHONEPE_WEBHOOK_PASSWORD = defineSecret("PHONEPE_WEBHOOK_PASSWORD");
 const PHONEPE_CLIENT_VERSION = defineString("PHONEPE_CLIENT_VERSION", { default: "1" });
 const PHONEPE_ENV = defineString("PHONEPE_ENV", { default: "SANDBOX" });
 const PHONEPE_BASE_URL = defineString("PHONEPE_BASE_URL", { default: "" });
@@ -409,7 +407,6 @@ exports.createPhonePeOrder = onCall({ region: "asia-south1", cors: true, secrets
     throw new HttpsError("unavailable", "PhonePe checkout could not be started. Please try again.");
   }
 });
-
 exports.verifyPhonePePayment = onCall({ region: "asia-south1", cors: true, secrets: phonePeSecrets, timeoutSeconds: 60 }, async (request) => {
   if (!request.auth) throw new HttpsError("unauthenticated", "Sign in to verify this payment.");
   const merchantOrderId = request.data?.merchantOrderId;
@@ -419,34 +416,4 @@ exports.verifyPhonePePayment = onCall({ region: "asia-south1", cors: true, secre
   const payment = await db.collection("phonePePayments").doc(merchantOrderId).get();
   if (!payment.exists || payment.data().uid !== request.auth.uid) throw new HttpsError("permission-denied", "This payment does not belong to your account.");
   return verifyAndFinalize(merchantOrderId);
-});
-
-exports.phonePeWebhook = onRequest({
-  region: "asia-south1",
-  secrets: [...phonePeSecrets, PHONEPE_WEBHOOK_USERNAME, PHONEPE_WEBHOOK_PASSWORD],
-  timeoutSeconds: 60,
-}, async (request, response) => {
-  if (request.method !== "POST") return response.status(405).send("Method not allowed");
-  const username = PHONEPE_WEBHOOK_USERNAME.value();
-  const password = PHONEPE_WEBHOOK_PASSWORD.value();
-  const expected = crypto.createHash("sha256").update(`${username}:${password}`).digest("hex");
-  const authorization = String(request.get("Authorization") || "").trim();
-  const expectedBytes = Buffer.from(expected);
-  const actualBytes = Buffer.from(authorization);
-  if (!username || !password || expectedBytes.length !== actualBytes.length || !crypto.timingSafeEqual(expectedBytes, actualBytes)) {
-    return response.status(401).send("Unauthorized");
-  }
-  const event = request.body?.event;
-  const merchantOrderId = request.body?.payload?.merchantOrderId;
-  if (typeof merchantOrderId !== "string" || !["checkout.order.completed", "checkout.order.failed"].includes(event)) {
-    return response.status(200).send("Ignored");
-  }
-  try {
-    // Treat the webhook as a signal only. Final payment state and amount come from PhonePe's status API.
-    await verifyAndFinalize(merchantOrderId);
-    return response.status(200).send("OK");
-  } catch (error) {
-    console.error("PhonePe webhook processing failed", { merchantOrderId, message: error.message });
-    return response.status(500).send("Retry");
-  }
 });

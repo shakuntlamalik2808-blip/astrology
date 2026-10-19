@@ -14,7 +14,6 @@ initializeApp();
 const db = getFirestore();
 
 const RESEND_API_KEY = defineSecret("RESEND_API_KEY");
-const GEMINI_API_KEY = defineSecret("GEMINI_API_KEY");
 const REMEDY_EMAIL_FROM = defineString("REMEDY_EMAIL_FROM");
 const ADMIN_NOTIFICATION_EMAILS = defineString("ADMIN_NOTIFICATION_EMAILS", { default: "" });
 
@@ -27,27 +26,6 @@ async function assertAdmin(request) {
     throw new HttpsError("permission-denied", "Admin access is required.");
   }
 }
-
-exports.translateRemedies = onCall({ region: "asia-south1", secrets: [GEMINI_API_KEY] }, async (request) => {
-  await assertAdmin(request);
-  const id = request.data?.consultationId;
-  if (typeof id !== "string") throw new HttpsError("invalid-argument", "Consultation ID is required.");
-  const consultation = await db.collection("consultations").doc(id).get();
-  const hindi = consultation.data()?.remediesHindi;
-  if (!consultation.exists || typeof hindi !== "string" || !hindi.trim()) throw new HttpsError("failed-precondition", "Save Hindi remedies before translating.");
-  const apiKey = GEMINI_API_KEY.value();
-  if (!apiKey) throw new HttpsError("failed-precondition", "GEMINI_API_KEY is not configured.");
-  const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-3.8-flash:generateContent?key=${apiKey}`, {
-    method: "POST", headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ contents: [{ parts: [{ text: `Translate and format the following Hindi astrological remedies into clear, warm, counseling-led English. Preserve the meaning and exact wording of mantras, gemstone names, Rudraksha, and daan items. Do not add remedies or make guarantees. Return only the edited English draft.\n\n${hindi}` }] }] }),
-  });
-  if (!response.ok) throw new HttpsError("internal", `Translation service returned ${response.status}.`);
-  const result = await response.json();
-  const text = result.candidates?.[0]?.content?.parts?.map((part) => part.text || "").join("").trim();
-  if (!text) throw new HttpsError("internal", "Translation service returned an empty draft.");
-  await consultation.ref.update({ remediesEnglish: text, updatedAt: FieldValue.serverTimestamp() });
-  return { text };
-});
 
 async function renderRemedyPdf(c, language, text) {
   const escapeHtml = (value) => String(value || "").replace(/[&<>"']/g, (character) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" })[character]);
