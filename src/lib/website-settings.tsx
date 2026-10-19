@@ -6,6 +6,7 @@ export type WebsiteService = { id: string; name: string; price: string; descript
 export type WebsiteShort = { id: string; title: string; url: string };
 
 export type WebsiteSettings = {
+  practitionerName: any;
   brandName: string;
   heroTitle: string;
   heroSubtitle: string;
