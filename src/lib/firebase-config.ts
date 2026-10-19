@@ -7,6 +7,10 @@ const requiredFirebaseKeys = [
   "VITE_FIREBASE_APP_ID",
 ] as const;
 
+export function getMissingFirebaseConfigKeys(): string[] {
+  return requiredFirebaseKeys.filter((key) => !import.meta.env[key]);
+}
+
 export function isFirebaseConfigured(): boolean {
-  return requiredFirebaseKeys.every((key) => Boolean(import.meta.env[key]));
+  return getMissingFirebaseConfigKeys().length === 0;
 }
