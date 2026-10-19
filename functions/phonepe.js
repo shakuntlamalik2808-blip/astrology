@@ -334,7 +334,7 @@ async function verifyAndFinalize(merchantOrderId) {
   return finalizeVerifiedOrder(merchantOrderId, status);
 }
 
-exports.createPhonePeOrder = onCall({ region: "asia-south1", secrets: phonePeSecrets, timeoutSeconds: 60 }, async (request) => {
+exports.createPhonePeOrder = onCall({ region: "asia-south1", cors: true, secrets: phonePeSecrets, timeoutSeconds: 60 }, async (request) => {
   if (!request.auth) throw new HttpsError("unauthenticated", "Sign in before booking a consultation.");
   const booking = validateBooking(request.data?.booking);
   const settingsSnapshot = await db.collection("settings").doc("website").get();
@@ -410,7 +410,7 @@ exports.createPhonePeOrder = onCall({ region: "asia-south1", secrets: phonePeSec
   }
 });
 
-exports.verifyPhonePePayment = onCall({ region: "asia-south1", secrets: phonePeSecrets, timeoutSeconds: 60 }, async (request) => {
+exports.verifyPhonePePayment = onCall({ region: "asia-south1", cors: true, secrets: phonePeSecrets, timeoutSeconds: 60 }, async (request) => {
   if (!request.auth) throw new HttpsError("unauthenticated", "Sign in to verify this payment.");
   const merchantOrderId = request.data?.merchantOrderId;
   if (typeof merchantOrderId !== "string" || !/^SS-[0-9]+-[a-f0-9]{12}$/.test(merchantOrderId)) {
