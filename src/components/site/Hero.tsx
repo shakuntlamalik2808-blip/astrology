@@ -2,7 +2,6 @@ import { motion, useScroll, useTransform, useReducedMotion } from "motion/react"
 import { useRef } from "react";
 import { MagneticButton } from "./MagneticButton";
 import { Starfield } from "./Starfield";
-import heroCosmos from "@/assets/hero-cosmos.webp";
 import { useWebsiteSettings } from "@/lib/website-settings";
 
 const headline = ["Clarity for the", "moments that matter."];
@@ -22,8 +21,8 @@ export function Hero() {
       ref={ref}
       className="surface-night grain relative flex min-h-[92svh] items-start overflow-hidden pt-20 sm:items-center sm:pt-24"
     >
-      <motion.img
-        src={settings.heroImageUrl || heroCosmos}
+      {settings.heroImageUrl && <motion.img
+        src={settings.heroImageUrl}
         alt=""
         width={1600}
         height={1200}
@@ -31,7 +30,7 @@ export function Hero() {
         decoding="async"
         style={reduced ? {} : { y: imageY }}
         className="absolute inset-0 h-[108%] w-full scale-[1.02] object-cover opacity-48"
-      />
+      />}
       <div className="absolute inset-0 bg-gradient-to-b from-ink/35 via-ink/45 to-ink" />
       <div className="absolute inset-0 bg-[radial-gradient(circle_at_50%_48%,transparent_0%,color-mix(in_oklab,var(--ink)_72%,transparent)_68%)]" />
       <Starfield count={32} />

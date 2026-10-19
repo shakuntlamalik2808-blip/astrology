@@ -176,7 +176,7 @@ export function Services() {
                   )}
                 >
                     <div className="pointer-events-none absolute inset-0 opacity-90">
-                      <img src={settings.serviceImageUrl} alt="" className="h-full w-full object-cover opacity-30" />
+                      {settings.serviceImageUrl && <img src={settings.serviceImageUrl} alt="" className="h-full w-full object-cover opacity-30" />}
                       <ServiceTexture type={current.id} />
                     </div>
                     <div className="absolute inset-0 bg-gradient-to-t from-ink via-ink/48 to-transparent" />

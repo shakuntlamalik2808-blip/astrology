@@ -62,7 +62,7 @@ export function Navbar() {
                 scrolled ? "text-lg sm:text-xl" : "text-xl sm:text-2xl",
               )}
             >
-              <span className="flex items-center gap-2"><img src={settings.logoUrl} alt="" className="size-8 rounded-full object-cover" /><span className="block truncate">{settings.brandName}</span></span>
+              <span className="flex items-center gap-2">{settings.logoUrl && <img src={settings.logoUrl} alt="" className="size-8 rounded-full object-cover" />}<span className="block truncate">{settings.brandName}</span></span>
             </span>
           </a>
 

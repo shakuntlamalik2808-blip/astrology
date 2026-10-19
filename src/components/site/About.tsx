@@ -2,7 +2,6 @@ import { motion, useScroll, useTransform, useReducedMotion } from "motion/react"
 import { useRef } from "react";
 import { Reveal, RevealWords } from "./Reveal";
 import { MagneticButton } from "./MagneticButton";
-import portrait from "@/assets/about-portrait.webp";
 import { useWebsiteSettings } from "@/lib/website-settings";
 
 export function About() {
@@ -15,11 +14,11 @@ export function About() {
   return (
     <section id="about" className="editorial-section bg-background">
       <div className="mx-auto grid max-w-[88rem] gap-16 px-6 lg:grid-cols-12 lg:px-12">
-        <div ref={ref} className="relative lg:col-span-5">
+        {settings.aboutImageUrl && <div ref={ref} className="relative lg:col-span-5">
           <div className="relative overflow-hidden rounded-sm bg-secondary">
             <motion.img
-              src={settings.aboutImageUrl || portrait}
-              alt="Abstract portrait placeholder representing the practice"
+              src={settings.aboutImageUrl}
+              alt=""
               loading="lazy"
               decoding="async"
               width={1008}
@@ -29,9 +28,9 @@ export function About() {
             />
           </div>
             <span className="pointer-events-none absolute right-0 -bottom-5 h-24 w-24 border-r border-b border-gold/55 sm:-right-5" />
-        </div>
+        </div>}
 
-        <div className="lg:col-span-6 lg:col-start-7 lg:pt-10">
+        <div className={settings.aboutImageUrl ? "lg:col-span-6 lg:col-start-7 lg:pt-10" : "lg:col-span-12 lg:pt-10"}>
           <Reveal>
             <p className="eyebrow text-terracotta">About</p>
           </Reveal>
