@@ -74,7 +74,7 @@ const clean = (s: string) => s.replace(/[<>]/g, "").trim();
 export const consultationSchema = z.object({
   fullName: z.string().transform(clean).pipe(z.string().min(2, "Please enter your full name.").max(100)),
   countryCode: z.string().regex(/^\+\d{1,4}$/),
-  phone: z.string().trim().regex(/^\d{6,14}$/, "Please enter a valid WhatsApp number."),
+  phone: z.string().trim().regex(/^\d{6,14}$/, "Please enter a valid phone number."),
   email: z.string().trim().max(255).email("Please enter a valid email address.").or(z.literal("")).optional().default(""),
   dateOfBirth: z.string().min(1, "Please enter your date of birth."),
   timeOfBirth: z.string().optional().default(""),
@@ -159,7 +159,7 @@ export function calculateBirthdayValidity(dateOfBirth: string, validFrom: string
 
 const LAST_KEY = "ss_last_submission";
 
-/** Writes the consultation. Customer linking + WhatsApp happen server-side (Cloud Function). */
+/** Writes the consultation. Customer linking happens server-side (Cloud Function). */
 export async function submitConsultation(
   data: ConsultationData,
   userId: string,

@@ -16,7 +16,6 @@ export type WebsiteSettings = {
   bookingContent: string;
   companyEmail: string;
   phone: string;
-  whatsapp: string;
   address: string;
   instagram: string;
   youtube: string;
@@ -40,7 +39,6 @@ export const defaultWebsiteSettings: WebsiteSettings = {
   bookingContent: "Book a consultation to receive personalized guidance for your life, relationships, and spiritual needs.",
   companyEmail: "astrology@studio.com",
   phone: "+91 98118 40795",
-  whatsapp: "+91 98118 40795",
   address: "Faridabad, India",
   instagram: "https://instagram.com",
   youtube: "https://youtube.com",

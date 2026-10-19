@@ -8,7 +8,6 @@ import {
   type User,
 } from "firebase/auth";
 import { getFirebaseAuth, isFirebaseConfigured } from "./firebase";
-import { ensureWhatsappSettings } from "./firestore-init";
 import { doc, getDoc } from "firebase/firestore";
 import { getFirebaseDb } from "./firebase";
 
@@ -20,12 +19,6 @@ async function isAuthorizedAdmin(user: User) {
     typeof email === "string" && email.toLowerCase() === user.email!.toLowerCase(),
   );
 }
-
-/**
- * Any user who exists in Firebase Authentication is treated as an admin.
- * Access is controlled entirely by who you add/remove in the Firebase
- * Console → Authentication → Users tab.
- */
 
 export async function adminSignInWithGoogle() {
   const provider = new GoogleAuthProvider();
@@ -65,7 +58,6 @@ export function useAdminAuth(): AdminState {
       if (!user) { setState({ status: "signed-out" }); return; }
       try {
         if (await isAuthorizedAdmin(user)) {
-          ensureWhatsappSettings();
           setState({ status: "admin", user });
         } else setState({ status: "unauthorized" });
       } catch {

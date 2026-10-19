@@ -1,5 +1,5 @@
 // Firebase Cloud Function: runs when a consultation is created from the website.
-// 1) links/creates the customer  2) logs an admin notification  3) sends WhatsApp (if configured)
+// 1) links/creates the customer  2) sends booking confirmation emails
 // Deploy: cd functions && npm install && firebase deploy --only functions,firestore:rules
 const { onDocumentCreated } = require("firebase-functions/v2/firestore");
 const { defineSecret, defineString } = require("firebase-functions/params");
@@ -13,9 +13,6 @@ const fs = require("fs");
 initializeApp();
 const db = getFirestore();
 
-const WHATSAPP_API_TOKEN = defineSecret("WHATSAPP_API_TOKEN");
-const WHATSAPP_PHONE_NUMBER_ID = defineSecret("WHATSAPP_PHONE_NUMBER_ID");
-const ADMIN_NUMBER = "919811840795";
 const RESEND_API_KEY = defineSecret("RESEND_API_KEY");
 const GEMINI_API_KEY = defineSecret("GEMINI_API_KEY");
 const REMEDY_EMAIL_FROM = defineString("REMEDY_EMAIL_FROM");
@@ -108,29 +105,6 @@ exports.sendRemedyEmail = onCall({ region: "asia-south1", memory: "1GiB", timeou
   }
 });
 
-function buildMessage(c) {
-  return [
-    c.source === "admin" ? "New Manual Consultation" : "New Website Consultation Request",
-    "",
-    `Name: ${c.fullName}`,
-    `WhatsApp: ${c.whatsappNumber}`,
-    `Email: ${c.email}`,
-    `Date of Birth: ${c.dateOfBirth}`,
-    `Time of Birth: ${c.timeOfBirth || "Not provided"}`,
-    `Place of Birth: ${c.placeOfBirth}`,
-    `Consultation Type: ${c.consultationType}`,
-    `Preferred Date: ${c.preferredDate}`,
-    `Preferred Time: ${c.preferredTime}`,
-    "",
-    "Message:",
-    c.additionalMessage || "—",
-    "",
-    `Source: ${c.source === "admin" ? "Admin" : "Website"}`,
-    `Status: ${c.status || "New"}`,
-    `Reference: ${c.consultationId}`,
-  ].join("\n");
-}
-
 function escapeHtml(value) {
   return String(value || "").replace(/[&<>"']/g, (character) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" })[character]);
 }
@@ -220,7 +194,7 @@ async function upsertCustomer(c) {
 }
 
 exports.onConsultationCreated = onDocumentCreated(
-  { document: "consultations/{id}", region: "asia-south1", secrets: [WHATSAPP_API_TOKEN, WHATSAPP_PHONE_NUMBER_ID, RESEND_API_KEY] },
+  { document: "consultations/{id}", region: "asia-south1", secrets: [RESEND_API_KEY] },
   async (event) => {
     const c = event.data?.data();
     if (!c) return;
@@ -238,45 +212,6 @@ exports.onConsultationCreated = onDocumentCreated(
     if (c.source === "admin" || c.source === "phonepe-conflict") return;
 
     await sendBookingEmails(c);
-
-    const message = buildMessage(c);
-    const notifRef = db.collection("notifications").doc();
-    const base = {
-      notificationId: notifRef.id,
-      consultationId: c.consultationId,
-      recipient: `+${ADMIN_NUMBER}`,
-      type: "ADMIN_CONSULTATION_NOTIFICATION",
-      message,
-      createdAt: FieldValue.serverTimestamp(),
-      sentAt: null,
-      error: null,
-    };
-
-    const token = WHATSAPP_API_TOKEN.value();
-    const phoneId = WHATSAPP_PHONE_NUMBER_ID.value();
-    const settings = db.collection("settings").doc("whatsapp");
-
-    if (!token || !phoneId) {
-      await notifRef.set({ ...base, status: "Not Configured" });
-      await settings.set({ status: "Not Configured", updatedAt: FieldValue.serverTimestamp() }, { merge: true });
-      return;
-    }
-
-    await notifRef.set({ ...base, status: "Pending" });
-    try {
-      const res = await fetch(`https://graph.facebook.com/v20.0/${phoneId}/messages`, {
-        method: "POST",
-        headers: { Authorization: `Bearer ${token}`, "Content-Type": "application/json" },
-        body: JSON.stringify({ messaging_product: "whatsapp", to: ADMIN_NUMBER, type: "text", text: { body: message } }),
-      });
-      if (!res.ok) throw new Error(`WhatsApp API ${res.status}: ${await res.text()}`);
-      await notifRef.update({ status: "Sent", sentAt: FieldValue.serverTimestamp() });
-      await settings.set({ status: "Connected", lastError: "", updatedAt: FieldValue.serverTimestamp() }, { merge: true });
-    } catch (e) {
-      const msg = String(e.message || e).slice(0, 500);
-      await notifRef.update({ status: "Failed", error: msg });
-      await settings.set({ status: "Error", lastError: msg, updatedAt: FieldValue.serverTimestamp() }, { merge: true });
-    }
   },
 );
 

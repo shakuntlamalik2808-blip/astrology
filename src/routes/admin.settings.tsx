@@ -22,7 +22,6 @@ type WebsiteSettings = {
   bookingContent: string;
   companyEmail: string;
   phone: string;
-  whatsapp: string;
   address: string;
   instagram: string;
   youtube: string;
@@ -53,7 +52,6 @@ const defaultSettings: WebsiteSettings = {
     "Book a consultation to receive personalized guidance for your life, relationships, and spiritual needs.",
   companyEmail: "astrology@studio.com",
   phone: "+91 98118 40795",
-  whatsapp: "+91 98118 40795",
   address: "Faridabad, India",
   instagram: "https://instagram.com",
   youtube: "https://youtube.com",
@@ -247,9 +245,6 @@ function WebsiteSettingsPage() {
             </Field>
             <Field label="Phone">
               <input value={settings.phone} onChange={(e) => updateField("phone", e.target.value)} className="w-full rounded-sm border border-[#d7c2a6] bg-white/80 px-3 py-2.5 text-sm text-[#171512] outline-none placeholder:text-[#6d655f] focus:border-[#c79f5b]" />
-            </Field>
-            <Field label="WhatsApp Number">
-              <input value={settings.whatsapp} onChange={(e) => updateField("whatsapp", e.target.value)} className="w-full rounded-sm border border-[#d7c2a6] bg-white/80 px-3 py-2.5 text-sm text-[#171512] outline-none placeholder:text-[#6d655f] focus:border-[#c79f5b]" />
             </Field>
             <Field label="Address">
               <input value={settings.address} onChange={(e) => updateField("address", e.target.value)} className="w-full rounded-sm border border-[#d7c2a6] bg-white/80 px-3 py-2.5 text-sm text-[#171512] outline-none placeholder:text-[#6d655f] focus:border-[#c79f5b] md:col-span-2" />

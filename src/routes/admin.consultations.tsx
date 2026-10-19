@@ -328,13 +328,13 @@ function ConsultationForm({ mode, initial, row, onClose }: { mode: "create" | "e
     <form onSubmit={save} noValidate>
       <DialogHeader>
         <DialogTitle className="font-display">{mode === "create" ? "New consultation" : `Edit ${row?.fullName ?? "consultation"}`}</DialogTitle>
-        <p className="text-xs text-muted-foreground">{mode === "create" ? "Record a phone, WhatsApp, or in-person booking." : `${row?.consultationId} · ${row?.source}`}</p>
+        <p className="text-xs text-muted-foreground">{mode === "create" ? "Record a phone or in-person booking." : `${row?.consultationId} · ${row?.source}`}</p>
       </DialogHeader>
 
       <div className="mt-6 space-y-7">
         <FormSection title="Client details">
           <FormField label="Full name" error={errors.fullName} full><input value={form.fullName} onChange={(event) => set("fullName")(event.target.value)} className={inputClass} /></FormField>
-          <FormField label="WhatsApp number" error={errors.phone}>
+          <FormField label="Phone number" error={errors.phone}>
             <div className="grid grid-cols-[7rem_minmax(0,1fr)] gap-2">
               <select aria-label="Country code" value={form.countryCode} onChange={(event) => set("countryCode")(event.target.value)} className={inputClass}>{COUNTRY_CODES.map((item) => <option key={item.code} value={item.code}>{item.code}</option>)}</select>
               <input type="tel" inputMode="numeric" value={form.phone} onChange={(event) => set("phone")(event.target.value)} className={inputClass} />

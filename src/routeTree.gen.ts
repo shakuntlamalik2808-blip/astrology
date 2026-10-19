@@ -25,7 +25,6 @@ import { Route as AdminConsultationsRouteImport } from './routes/admin.consultat
 import { Route as AdminNotificationsRouteImport } from './routes/admin.notifications'
 import { Route as AdminReelsRouteImport } from './routes/admin.reels'
 import { Route as AdminSettingsRouteImport } from './routes/admin.settings'
-import { Route as AdminWhatsappRouteImport } from './routes/admin.whatsapp'
 import { Route as AdminLoginRouteImport } from './routes/admin_.login'
 import { Route as PaymentReturnRouteImport } from './routes/payment.return'
 
@@ -109,11 +108,6 @@ const AdminSettingsRoute = AdminSettingsRouteImport.update({
   path: '/settings',
   getParentRoute: () => AdminRoute,
 } as any)
-const AdminWhatsappRoute = AdminWhatsappRouteImport.update({
-  id: '/whatsapp',
-  path: '/whatsapp',
-  getParentRoute: () => AdminRoute,
-} as any)
 const AdminLoginRoute = AdminLoginRouteImport.update({
   id: '/admin_/login',
   path: '/admin/login',
@@ -141,7 +135,6 @@ export interface FileRoutesByFullPath {
   '/admin/notifications': typeof AdminNotificationsRoute
   '/admin/reels': typeof AdminReelsRoute
   '/admin/settings': typeof AdminSettingsRoute
-  '/admin/whatsapp': typeof AdminWhatsappRoute
   '/admin/login': typeof AdminLoginRoute
   '/payment/return': typeof PaymentReturnRoute
   '/admin/': typeof AdminIndexRoute
@@ -161,7 +154,6 @@ export interface FileRoutesByTo {
   '/admin/notifications': typeof AdminNotificationsRoute
   '/admin/reels': typeof AdminReelsRoute
   '/admin/settings': typeof AdminSettingsRoute
-  '/admin/whatsapp': typeof AdminWhatsappRoute
   '/admin/login': typeof AdminLoginRoute
   '/payment/return': typeof PaymentReturnRoute
   '/admin': typeof AdminIndexRoute
@@ -183,7 +175,6 @@ export interface FileRoutesById {
   '/admin/notifications': typeof AdminNotificationsRoute
   '/admin/reels': typeof AdminReelsRoute
   '/admin/settings': typeof AdminSettingsRoute
-  '/admin/whatsapp': typeof AdminWhatsappRoute
   '/admin_/login': typeof AdminLoginRoute
   '/payment/return': typeof PaymentReturnRoute
   '/admin/': typeof AdminIndexRoute
@@ -206,7 +197,6 @@ export interface FileRouteTypes {
     | '/admin/notifications'
     | '/admin/reels'
     | '/admin/settings'
-    | '/admin/whatsapp'
     | '/admin/login'
     | '/payment/return'
     | '/admin/'
@@ -226,7 +216,6 @@ export interface FileRouteTypes {
     | '/admin/notifications'
     | '/admin/reels'
     | '/admin/settings'
-    | '/admin/whatsapp'
     | '/admin/login'
     | '/payment/return'
     | '/admin'
@@ -247,7 +236,6 @@ export interface FileRouteTypes {
     | '/admin/notifications'
     | '/admin/reels'
     | '/admin/settings'
-    | '/admin/whatsapp'
     | '/admin_/login'
     | '/payment/return'
     | '/admin/'
@@ -381,13 +369,6 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AdminSettingsRouteImport
       parentRoute: typeof AdminRoute
     }
-    '/admin/whatsapp': {
-      id: '/admin/whatsapp'
-      path: '/whatsapp'
-      fullPath: '/admin/whatsapp'
-      preLoaderRoute: typeof AdminWhatsappRouteImport
-      parentRoute: typeof AdminRoute
-    }
     '/admin_/login': {
       id: '/admin_/login'
       path: '/admin/login'
@@ -412,7 +393,6 @@ interface AdminRouteChildren {
   AdminNotificationsRoute: typeof AdminNotificationsRoute
   AdminReelsRoute: typeof AdminReelsRoute
   AdminSettingsRoute: typeof AdminSettingsRoute
-  AdminWhatsappRoute: typeof AdminWhatsappRoute
   AdminIndexRoute: typeof AdminIndexRoute
 }
 
@@ -423,7 +403,6 @@ const AdminRouteChildren: AdminRouteChildren = {
   AdminNotificationsRoute: AdminNotificationsRoute,
   AdminReelsRoute: AdminReelsRoute,
   AdminSettingsRoute: AdminSettingsRoute,
-  AdminWhatsappRoute: AdminWhatsappRoute,
   AdminIndexRoute: AdminIndexRoute,
 }
 

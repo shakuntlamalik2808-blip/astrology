@@ -24,7 +24,7 @@ import { getFunctions, httpsCallable } from "firebase/functions";
 
 const title = "Book a Consultation — Shakuntla Malik";
 const description =
-  "Request a Kundli, Vastu, Match Making or general Jyotish consultation with Shakuntla Malik. Share your details and we'll reach you on WhatsApp.";
+  "Request a Kundli, Vastu, Match Making or general Jyotish consultation with Shakuntla Malik. Share your details and we'll contact you by phone or email.";
 
 export const Route = createFileRoute("/book-consultation")({
   head: () => ({
@@ -472,7 +472,7 @@ function BookPage() {
                     <Field id="fullName" label="Person’s full name" error={errors.fullName} full>
                       <input id="f-fullName" autoComplete="name" value={values.fullName} onChange={(e) => set("fullName")(e.target.value)} className={inputCls} />
                     </Field>
-                    <Field id="phone" label="WhatsApp number" error={errors.phone}>
+                    <Field id="phone" label="Phone number" error={errors.phone}>
                       <div className="grid grid-cols-[minmax(0,0.9fr)_minmax(0,1.1fr)] gap-2 sm:grid-cols-[8rem_minmax(0,1fr)]">
                         <select aria-label="Country code" value={values.countryCode} onChange={(e) => set("countryCode")(e.target.value)} className={`${inputCls} min-w-0 px-2 sm:px-3`}>
                           {COUNTRY_CODES.map((c) => (

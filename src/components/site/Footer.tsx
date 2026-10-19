@@ -35,7 +35,7 @@ export function Footer() {
             >
               {settings.companyEmail}
             </a>
-            <a href={`https://wa.me/${settings.whatsapp.replace(/\D/g, "")}`} className="mt-3 block text-sm text-ivory/70">WhatsApp: {settings.whatsapp}</a>
+            <a href={`tel:${settings.phone.replace(/\s/g, "")}`} className="mt-3 block text-sm text-ivory/70">Phone: {settings.phone}</a>
           </div>
 
           <nav className="lg:col-span-4" aria-label="Footer">

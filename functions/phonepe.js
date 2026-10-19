@@ -99,7 +99,7 @@ function validateBooking(data) {
   if (data.fullName.trim().length < 2 || data.fullName.length > 100 || data.memberName.trim().length < 2 || data.memberName.length > 100) {
     throw new HttpsError("invalid-argument", "Enter a valid name for the customer and consultation member.");
   }
-  if (!/^\+[0-9]{7,18}$/.test(data.whatsappNumber)) throw new HttpsError("invalid-argument", "Enter a valid WhatsApp number.");
+  if (!/^\+[0-9]{7,18}$/.test(data.whatsappNumber)) throw new HttpsError("invalid-argument", "Enter a valid phone number.");
   if (!/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(data.email) || data.email.length > 254) throw new HttpsError("invalid-argument", "Enter a valid email address.");
   const isDate = (value) => /^\d{4}-\d{2}-\d{2}$/.test(value) && !Number.isNaN(Date.parse(`${value}T00:00:00Z`)) && new Date(`${value}T00:00:00Z`).toISOString().slice(0, 10) === value;
   if (!isDate(data.dateOfBirth) || !isDate(data.preferredDate) || data.dateOfBirth > new Date().toISOString().slice(0, 10)) {

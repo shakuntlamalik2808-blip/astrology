@@ -1,7 +1,6 @@
 import { useEffect, useState } from "react";
 import {
   collection,
-  doc,
   getDocs,
   onSnapshot,
   orderBy,
@@ -9,7 +8,7 @@ import {
   type Timestamp,
 } from "firebase/firestore";
 import { getFirebaseDb } from "./firebase";
-import { ensureWhatsappSettings, firestoreErrorMessage, isMissingIndexError } from "./firestore-init";
+import { firestoreErrorMessage, isMissingIndexError } from "./firestore-init";
 import type { Consultation } from "./consultations";
 
 export type NotificationLog = {
@@ -90,46 +89,6 @@ export const useConsultations = () =>
   useCollection<Consultation & { id: string }>("consultations");
 export const useNotifications = () =>
   useCollection<NotificationLog>("notifications");
-
-export type WhatsappSettings = {
-  status: "Connected" | "Not Configured" | "Error";
-  lastError?: string;
-  updatedAt?: Timestamp;
-};
-
-/**
- * Subscribes to settings/whatsapp.
- * On a fresh database the document won't exist yet — this hook seeds it
- * automatically with defaults and then listens for real-time updates.
- */
-export function useWhatsappSettings() {
-  const [data, setData] = useState<WhatsappSettings | null>(null);
-
-  useEffect(() => {
-    // Seed the document if it's missing, then subscribe
-    ensureWhatsappSettings().then(() => {
-      const ref = doc(getFirebaseDb(), "settings", "whatsapp");
-      const unsubscribe = onSnapshot(
-        ref,
-        (snap) => {
-          setData(
-            (snap.data() as WhatsappSettings | undefined) ?? {
-              status: "Not Configured",
-            },
-          );
-        },
-        (err) => {
-          console.error("[admin-data] settings/whatsapp listen failed:", err);
-          // Still show a safe default rather than a blank screen
-          setData({ status: "Not Configured" });
-        },
-      );
-      return unsubscribe;
-    });
-  }, []);
-
-  return data;
-}
 
 export const tsToString = (t?: Timestamp | null) =>
   t
