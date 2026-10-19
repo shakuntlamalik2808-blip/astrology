@@ -548,7 +548,7 @@ function BookPage() {
                     className="mt-10 inline-flex min-h-14 w-full items-center justify-center gap-3 rounded-sm bg-gold px-8 text-[0.78rem] font-medium uppercase tracking-[0.14em] text-ink transition-colors duration-200 hover:bg-gold-soft focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-gold disabled:cursor-not-allowed disabled:opacity-70 md:w-auto"
                   >
                     {submitting && <span className="size-4 animate-spin rounded-full border-2 border-ink/30 border-t-ink" aria-hidden />}
-                    {submitting ? "Preparing secure checkout…" : selectedService ? `Pay ${selectedService.price} with PhonePe & Book` : "Choose a priced consultation"}
+                    {submitting ? "Preparing secure checkout…" : selectedService ? `Pay ${selectedService.price} & Book` : "Choose a priced consultation"}
                   </button>
                 </motion.form>
               </motion.div>
