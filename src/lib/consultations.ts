@@ -1,6 +1,42 @@
 import type { Timestamp } from "firebase/firestore";
 import { z } from "zod";
 
+type BookingDebugLevel = "log" | "warn" | "error";
+
+export function logBookingDebug(
+  level: BookingDebugLevel,
+  event: string,
+  details: Record<string, unknown> = {},
+) {
+  const entry = { event, timestamp: new Date().toISOString(), ...details };
+  if (level === "error") {
+    console.error("[BookingDebug]", entry);
+  } else if (level === "warn") {
+    console.warn("[BookingDebug]", entry);
+  } else {
+    console.log("[BookingDebug]", entry);
+  }
+}
+
+export function bookingErrorDetails(error: unknown) {
+  if (error instanceof Error) {
+    const firebaseError = error as Error & { code?: string };
+    return {
+      errorName: error.name,
+      errorCode: firebaseError.code ?? null,
+      errorMessage: error.message,
+      errorStack: error.stack ?? null,
+    };
+  }
+  const nonError = error as { code?: string; stack?: string } | null;
+  return {
+    errorName: typeof error,
+    errorCode: nonError?.code ?? null,
+    errorMessage: String(error),
+    errorStack: nonError?.stack ?? null,
+  };
+}
+
 export const CONSULTATION_TYPES = [
   "Kundli Consultation",
   "Vastu Consultation",
@@ -74,6 +110,11 @@ export type Consultation = {
   notes?: string;
   archived?: boolean;
   customerId?: string;
+  remedyPdfUrl?: string;
+  remediesHindi?: string;
+  remediesEnglish?: string;
+  remedyLanguage?: "Hindi" | "English";
+  remediesSentAt?: Timestamp;
   createdAt?: Timestamp;
   updatedAt?: Timestamp;
 };
@@ -94,55 +135,127 @@ export const bookingSlotId = (date: string, time: string) => `${date}_${time}`;
 const LAST_KEY = "ss_last_submission";
 
 /** Writes the consultation. Customer linking + WhatsApp happen server-side (Cloud Function). */
-export async function submitConsultation(data: ConsultationData): Promise<string> {
+export async function submitConsultation(data: ConsultationData, userId: string): Promise<string> {
   const fingerprint = `${data.email}|${data.phone}|${data.consultationType}|${data.preferredDate}|${data.preferredTime}`;
+  const slotId = bookingSlotId(data.preferredDate, data.preferredTime);
   try {
     const last = JSON.parse(localStorage.getItem(LAST_KEY) ?? "null") as { f: string; t: number; id: string } | null;
-    if (last && last.f === fingerprint && Date.now() - last.t < 2 * 60 * 1000) return last.id;
-  } catch {
-    /* ignore */
+    if (last && last.f === fingerprint && Date.now() - last.t < 2 * 60 * 1000) {
+      logBookingDebug("warn", "duplicate_submission_suppressed", { referenceId: last.id, slotId });
+      return last.id;
+    }
+  } catch (error) {
+    logBookingDebug("warn", "duplicate_guard_unavailable", bookingErrorDetails(error));
   }
 
   const id = makeConsultationId();
+  logBookingDebug("log", "transaction_start", {
+    referenceId: id,
+    slotId,
+    consultationType: data.consultationType,
+    preferredDate: data.preferredDate,
+    preferredTime: data.preferredTime,
+  });
   const [{ collection, doc, runTransaction, serverTimestamp }, { getFirebaseDb }] = await Promise.all([
     import("firebase/firestore"),
     import("./firebase"),
   ]);
   const db = getFirebaseDb();
-  const slotId = bookingSlotId(data.preferredDate, data.preferredTime);
-  await runTransaction(db, async (transaction) => {
-    const availabilityRef = doc(db, "availableSlots", slotId);
-    const bookingRef = doc(db, "bookedSlots", slotId);
-    const [availability, booking] = await Promise.all([
-      transaction.get(availabilityRef),
-      transaction.get(bookingRef),
-    ]);
-    if (!availability.exists() || !availability.data().enabled) {
-      throw new Error("This time is no longer available. Please choose another slot.");
-    }
-    if (booking.exists()) throw new Error("This time was just booked. Please choose another slot.");
+  let transactionAttempt = 0;
+  try {
+    await runTransaction(db, async (transaction) => {
+      transactionAttempt += 1;
+      logBookingDebug("log", "transaction_attempt", { referenceId: id, slotId, attempt: transactionAttempt });
+      const availabilityRef = doc(db, "availableSlots", slotId);
+      const bookingRef = doc(db, "bookedSlots", slotId);
+      logBookingDebug("log", "transaction_read_start", {
+        referenceId: id,
+        attempt: transactionAttempt,
+        collection: "availableSlots",
+        documentId: slotId,
+      });
+      logBookingDebug("log", "transaction_read_start", {
+        referenceId: id,
+        attempt: transactionAttempt,
+        collection: "bookedSlots",
+        documentId: slotId,
+      });
+      const [availability, booking] = await Promise.all([
+        transaction.get(availabilityRef),
+        transaction.get(bookingRef),
+      ]);
+      logBookingDebug("log", "transaction_read_complete", {
+        referenceId: id,
+        attempt: transactionAttempt,
+        collection: "availableSlots",
+        documentId: slotId,
+        exists: availability.exists(),
+        enabled: availability.exists() ? availability.data()["enabled"] === true : false,
+      });
+      logBookingDebug("log", "transaction_read_complete", {
+        referenceId: id,
+        attempt: transactionAttempt,
+        collection: "bookedSlots",
+        documentId: slotId,
+        exists: booking.exists(),
+      });
+      if (!availability.exists() || !availability.data()["enabled"]) {
+        throw new Error("This time is no longer available. Please choose another slot.");
+      }
+      if (booking.exists()) throw new Error("This time was just booked. Please choose another slot.");
 
-    transaction.set(doc(collection(db, "consultations"), id), {
-      consultationId: id,
-      fullName: data.fullName,
-      whatsappNumber: `${data.countryCode}${data.phone}`,
-      email: data.email.toLowerCase(),
-      dateOfBirth: data.dateOfBirth,
-      timeOfBirth: data.timeOfBirth ?? "",
-      placeOfBirth: data.placeOfBirth,
-      currentCity: data.currentCity,
-      consultationType: data.consultationType,
-      preferredDate: data.preferredDate,
-      preferredTime: data.preferredTime,
-      additionalMessage: data.additionalMessage,
-      source: "website",
-      status: "New",
-      createdAt: serverTimestamp(),
-      updatedAt: serverTimestamp(),
+      logBookingDebug("log", "transaction_write_queued", {
+        referenceId: id,
+        attempt: transactionAttempt,
+        collection: "consultations",
+        documentId: id,
+      });
+      transaction.set(doc(collection(db, "consultations"), id), {
+        consultationId: id,
+        fullName: data.fullName,
+        whatsappNumber: `${data.countryCode}${data.phone}`,
+        email: data.email.toLowerCase(),
+        dateOfBirth: data.dateOfBirth,
+        timeOfBirth: data.timeOfBirth ?? "",
+        placeOfBirth: data.placeOfBirth,
+        currentCity: data.currentCity,
+        consultationType: data.consultationType,
+        preferredDate: data.preferredDate,
+        preferredTime: data.preferredTime,
+        additionalMessage: data.additionalMessage,
+        source: "website",
+        status: "New",
+        createdAt: serverTimestamp(),
+        updatedAt: serverTimestamp(),
+        userId,
+        customerId: userId,
+      });
+      logBookingDebug("log", "transaction_write_queued", {
+        referenceId: id,
+        attempt: transactionAttempt,
+        collection: "bookedSlots",
+        documentId: slotId,
+      });
+      transaction.set(bookingRef, { date: data.preferredDate, time: data.preferredTime, consultationId: id });
     });
-    transaction.set(bookingRef, { date: data.preferredDate, time: data.preferredTime, consultationId: id });
-  });
-  localStorage.setItem(LAST_KEY, JSON.stringify({ f: fingerprint, t: Date.now(), id }));
+  } catch (error) {
+    logBookingDebug("error", "transaction_failed", {
+      referenceId: id,
+      slotId,
+      attempts: transactionAttempt,
+      ...bookingErrorDetails(error),
+    });
+    throw error;
+  }
+  logBookingDebug("log", "transaction_commit_success", { referenceId: id, slotId, attempts: transactionAttempt });
+  try {
+    localStorage.setItem(LAST_KEY, JSON.stringify({ f: fingerprint, t: Date.now(), id }));
+  } catch (error) {
+    logBookingDebug("warn", "duplicate_guard_persist_failed_after_commit", {
+      referenceId: id,
+      ...bookingErrorDetails(error),
+    });
+  }
   return id;
 }
 

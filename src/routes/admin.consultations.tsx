@@ -1,10 +1,10 @@
 import { createFileRoute } from "@tanstack/react-router";
-import { useMemo, useState, type FormEvent, type ReactNode } from "react";
+import { useEffect, useMemo, useRef, useState, type FormEvent, type ReactNode } from "react";
 import { collection, deleteDoc, doc, serverTimestamp, setDoc, updateDoc } from "firebase/firestore";
 import { Plus } from "lucide-react";
 import { z } from "zod";
 import { useConsultations } from "@/lib/admin-data";
-import { getFirebaseDb } from "@/lib/firebase";
+import { getFirebaseApp, getFirebaseDb } from "@/lib/firebase";
 import {
   CONSULTATION_TYPES,
   COUNTRY_CODES,
@@ -23,6 +23,9 @@ import {
 import { StatusBadge } from "@/components/admin/StatusBadge";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { httpsCallable } from "firebase/functions";
+import { getFunctions } from "firebase/functions";
+import { Mic, MicOff, Download, Mail, Languages } from "lucide-react";
 
 export const Route = createFileRoute("/admin/consultations")({
   head: () => ({
@@ -359,6 +362,7 @@ function ConsultationForm({ mode, initial, row, onClose }: { mode: "create" | "e
           <FormField label="Payment date" error={errors.paymentDate}><input type="date" value={form.paymentDate} onChange={(event) => set("paymentDate")(event.target.value)} className={inputClass} /></FormField>
           <FormField label="Payment reference" error={errors.paymentReference} full><input placeholder="Optional transaction ID or receipt number" value={form.paymentReference} onChange={(event) => set("paymentReference")(event.target.value)} className={inputClass} /></FormField>
         </FormSection>
+        {mode === "edit" && row && <RemediesEditor row={row} />}
       </div>
 
       {error && <p role="alert" className="mt-5 text-sm text-destructive">{error}</p>}
@@ -373,6 +377,118 @@ function ConsultationForm({ mode, initial, row, onClose }: { mode: "create" | "e
       </div>
     </form>
   );
+}
+
+type SpeechAlternative = { transcript: string };
+type SpeechResult = { isFinal: boolean; [index: number]: SpeechAlternative };
+type SpeechEvent = { resultIndex: number; results: ArrayLike<SpeechResult> };
+type SpeechRecognizer = {
+  lang: string; continuous: boolean; interimResults: boolean;
+  onresult: ((event: SpeechEvent) => void) | null;
+  onerror: (() => void) | null; onend: (() => void) | null;
+  start(): void; stop(): void;
+};
+type SpeechWindow = Window & { SpeechRecognition?: new () => SpeechRecognizer; webkitSpeechRecognition?: new () => SpeechRecognizer };
+
+function RemediesEditor({ row }: { row: Row }) {
+  const [hindi, setHindi] = useState(row.remediesHindi ?? "");
+  const [english, setEnglish] = useState(row.remediesEnglish ?? "");
+  const [language, setLanguage] = useState<"Hindi" | "English">(row.remedyLanguage ?? "Hindi");
+  const [interim, setInterim] = useState("");
+  const [recording, setRecording] = useState(false);
+  const [busy, setBusy] = useState(false);
+  const [notice, setNotice] = useState("");
+  const recognition = useRef<SpeechRecognizer | null>(null);
+  const selected = language === "Hindi" ? hindi : english;
+
+  useEffect(() => () => recognition.current?.stop(), []);
+
+  function toggleRecording() {
+    if (recording) { recognition.current?.stop(); setRecording(false); setInterim(""); return; }
+    const Constructor = (window as SpeechWindow).SpeechRecognition ?? (window as SpeechWindow).webkitSpeechRecognition;
+    if (!Constructor) { setNotice("Hindi voice dictation is not supported in this browser. Try Chrome or type your notes."); return; }
+    const speech = new Constructor();
+    speech.lang = "hi-IN"; speech.continuous = true; speech.interimResults = true;
+    speech.onresult = (event) => {
+      let finalText = ""; let preview = "";
+      for (let i = event.resultIndex; i < event.results.length; i++) {
+        const result = event.results[i];
+        if (!result) continue;
+        if (result.isFinal) finalText += result[0]?.transcript ?? "";
+        else preview += result[0]?.transcript ?? "";
+      }
+      if (finalText.trim()) setHindi((current) => `${current}${current.trim() ? "\n" : ""}${finalText.trim()}`);
+      setInterim(preview);
+    };
+    speech.onerror = () => { setNotice("Microphone dictation stopped. Check microphone permission and try again."); setRecording(false); };
+    speech.onend = () => { setRecording(false); setInterim(""); };
+    recognition.current = speech; setNotice(""); setRecording(true); speech.start();
+  }
+
+  async function saveDraft(fields: Record<string, unknown> = {}): Promise<boolean> {
+    if (!row) return false;
+    setBusy(true); setNotice("");
+    try {
+      await updateDoc(doc(getFirebaseDb(), "consultations", row.id), {
+        remediesHindi: hindi, remediesEnglish: english, remedyLanguage: language,
+        updatedAt: serverTimestamp(), ...fields,
+      });
+      setNotice("Remedies saved.");
+      return true;
+    } catch (cause) { setNotice((cause as Error).message || "Could not save remedies."); return false; }
+    finally { setBusy(false); }
+  }
+
+  async function translate() {
+    if (!await saveDraft()) return;
+    setBusy(true); setNotice("");
+    try {
+      const callable = httpsCallable<{ consultationId: string }, { text: string }>(getFunctions(getFirebaseApp(), "asia-south1"), "translateRemedies");
+      const result = await callable({ consultationId: row.id });
+      setEnglish(result.data.text); setLanguage("English"); setNotice("English draft created. Review and edit it before sending.");
+    } catch (cause) { setNotice((cause as Error).message || "Translation could not be created."); }
+    finally { setBusy(false); }
+  }
+
+  function preview() {
+    const content = selected;
+    const safe = (value: string) => value.replace(/[&<>"']/g, (char) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" })[char]!);
+    const remedyItems = content.split(/\r?\n/).map((line) => line.trim()).filter(Boolean).map((line) => `<li>${safe(line)}</li>`).join("");
+    const body = `<!doctype html><html lang="${language === "Hindi" ? "hi" : "en"}"><meta charset="utf-8"><title>Remedies — ${safe(row.consultationId)}</title><style>@import url('https://fonts.googleapis.com/css2?family=Noto+Sans+Devanagari:wght@400;500;600&family=Playfair+Display:wght@500;600&display=swap');body{font-family:'Noto Sans Devanagari',serif;color:#18202b;margin:0}.page{max-width:760px;margin:48px auto;padding:52px;border:1px solid #c6a96b}.brand{color:#a7833d;letter-spacing:.18em;text-transform:uppercase;font-size:12px}.title{font-family:'Playfair Display',serif;font-size:30px;margin:8px 0 26px}.meta{border-block:1px solid #ddd;padding:16px 0;line-height:1.8}.remedies{line-height:1.9;margin-top:24px;padding-left:1.5em}.remedies li{padding:0 0 10px 6px}.remedies li::marker{color:#a7833d}.footer{margin-top:42px;color:#777;font-size:12px}@media print{.page{margin:0 auto;border:0}}</style><main class="page"><div class="brand">Shakuntla Malik · Jyotish, Counseling & Astrology Academy</div><h1 class="title">${language === "Hindi" ? "ज्योतिषीय उपाय एवं मार्गदर्शन" : "Remedies & Guidance"}</h1><div class="meta"><b>Reference:</b> ${safe(row.consultationId)}<br><b>Client:</b> ${safe(row.fullName)}<br><b>Date:</b> ${safe(formatDate(row.preferredDate))}<br><b>Birth details:</b> ${safe([row.dateOfBirth, row.timeOfBirth, row.placeOfBirth].filter(Boolean).join(" · "))}</div><ol class="remedies">${remedyItems}</ol><div class="footer">Prepared with care by Shakuntla Malik</div></main><script>window.onload=()=>document.fonts.ready.then(()=>window.print())</script></html>`;
+    const url = URL.createObjectURL(new Blob([body], { type: "text/html" }));
+    window.open(url, "_blank", "noopener,noreferrer");
+  }
+
+  async function sendEmail() {
+    if (!row.email) return;
+    if (!await saveDraft()) return;
+    setBusy(true); setNotice("");
+    try {
+      const callable = httpsCallable<{ consultationId: string }, { sent: boolean }>(getFunctions(getFirebaseApp(), "asia-south1"), "sendRemedyEmail");
+      await callable({ consultationId: row.id });
+      setNotice(`Remedy PDF emailed to ${row.email}.`);
+    } catch (cause) { setNotice((cause as Error).message || "Email could not be sent."); }
+    finally { setBusy(false); }
+  }
+
+  return <FormSection title="Remedies & Guidance (उपाय)">
+    <div className="space-y-4 sm:col-span-2">
+      <div className="flex flex-wrap items-center gap-3">
+        <button type="button" onClick={toggleRecording} className={`inline-flex items-center gap-2 rounded-sm px-4 py-2 text-sm ${recording ? "bg-destructive text-white" : "border border-border bg-background"}`}>
+          {recording ? <MicOff size={16} /> : <Mic size={16} />}{recording ? "Stop microphone" : "Start Hindi dictation"}
+        </button>
+        {recording && <span className="flex items-center gap-2 text-sm text-destructive"><span className="size-2 animate-pulse rounded-full bg-destructive" /> Recording in Hindi</span>}
+        <label className="ml-auto flex items-center gap-2 text-sm">PDF language<select value={language} onChange={(event) => setLanguage(event.target.value as "Hindi" | "English")} className={inputClass}><option value="Hindi">Hindi (हिन्दी)</option><option value="English">English</option></select></label>
+      </div>
+      {language === "Hindi" ? <label className="block text-xs text-muted-foreground">Hindi remedies<textarea rows={7} lang="hi" value={hindi} onChange={(event) => setHindi(event.target.value)} className={`${inputClass} h-auto py-3`} placeholder="उपाय यहाँ लिखें या हिंदी में बोलें…" /></label> : <label className="block text-xs text-muted-foreground">English remedies draft<textarea rows={7} value={english} onChange={(event) => setEnglish(event.target.value)} className={`${inputClass} h-auto py-3`} placeholder="Review and edit the English version here…" /></label>}
+      {recording && interim && <p aria-live="polite" className="rounded-sm border border-gold/40 bg-muted/40 p-3 text-sm text-muted-foreground">Listening: {interim}</p>}
+      {language === "English" && <Button type="button" variant="outline" disabled={busy || !hindi.trim()} onClick={translate}><Languages className="mr-2 size-4" />Translate / Format to English</Button>}
+      <div className="flex flex-wrap gap-2"><Button type="button" variant="outline" disabled={busy} onClick={() => void saveDraft()}>Save remedies</Button><Button type="button" variant="outline" disabled={busy || !selected.trim()} onClick={preview}><Download className="mr-2 size-4" />Preview / Download PDF</Button><Button type="button" disabled={busy || !row.email || !selected.trim()} onClick={() => void sendEmail()}><Mail className="mr-2 size-4" />Send Remedies PDF via Email</Button></div>
+      {!row.email && <p className="text-xs text-muted-foreground">Add a customer email address to enable email delivery.</p>}
+      {row.remediesSentAt && <p className="text-xs text-muted-foreground">Last sent: {row.remediesSentAt.toDate().toLocaleString("en-IN")}</p>}
+      {notice && <p role="status" className="text-sm text-muted-foreground">{notice}</p>}
+    </div>
+  </FormSection>;
 }
 
 const inputClass = "mt-1 h-10 w-full min-w-0 rounded-sm border border-input bg-background px-3 text-sm";

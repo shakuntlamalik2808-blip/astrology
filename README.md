@@ -59,3 +59,22 @@ A private, unlisted administration area manages the site's day-to-day operations
 
 - The site respects your privacy preferences: ambient animation is automatically reduced if your device requests it.
 - For enquiries not covered by the booking form, reach out through the contact details in the footer.
+# Admin remedy dictation, PDFs, and email
+
+The consultation editor includes Hindi (`hi-IN`) dictation, editable Hindi and
+English remedies, a print-ready branded preview, and an email flow that attaches
+a server-generated PDF with embedded Noto Sans fonts for Devanagari and Latin.
+The English draft uses the Gemini API and requires review before sending.
+
+Configure the Functions secrets and sender before deploying:
+
+```sh
+firebase functions:secrets:set GEMINI_API_KEY
+firebase functions:secrets:set RESEND_API_KEY
+```
+
+Set `REMEDY_EMAIL_FROM` as a Firebase Functions parameter to an address on a
+domain verified with Resend (the deploy prompt requests it if it is unset), then
+deploy with `firebase deploy --only functions`. The browser preview opens the
+print dialog; choose “Save as PDF” to download it. Email attachments are rendered
+by the Cloud Function and do not depend on the browser's installed fonts.

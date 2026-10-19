@@ -1,9 +1,11 @@
 import { useEffect, useState } from "react";
 import { AnimatePresence, motion, useScroll, useMotionValueEvent } from "motion/react";
-import { Menu, X } from "lucide-react";
+import { LogOut, Menu, UserRound, X } from "lucide-react";
 import { MagneticButton } from "./MagneticButton";
 import { cn } from "@/lib/utils";
 import { useWebsiteSettings } from "@/lib/website-settings";
+import { Link } from "@tanstack/react-router";
+import { customerSignOut, useCustomerAuth } from "@/lib/customer-auth";
 
 const links = [
   { label: "Practice", href: "/#practice" },
@@ -16,11 +18,20 @@ const links = [
 
 export function Navbar() {
   const settings = useWebsiteSettings();
+  const { user, name } = useCustomerAuth();
   const [scrolled, setScrolled] = useState(false);
   const [open, setOpen] = useState(false);
+  const [adminDenied, setAdminDenied] = useState(false);
   const { scrollY } = useScroll();
 
   useMotionValueEvent(scrollY, "change", (v) => setScrolled(v > 40));
+
+  useEffect(() => {
+    if (sessionStorage.getItem("adminAccessDenied") === "true") {
+      sessionStorage.removeItem("adminAccessDenied");
+      setAdminDenied(true);
+    }
+  }, []);
 
   useEffect(() => {
     document.body.style.overflow = open ? "hidden" : "";
@@ -42,6 +53,7 @@ export function Navbar() {
             : "border-b border-ivory/8 py-5",
         )}
       >
+        {adminDenied && <div role="status" className="bg-terracotta px-4 py-2 text-center text-sm text-ivory">This account is not authorised for the admin area. You have been returned to the public site.</div>}
         <nav className="mx-auto grid max-w-[88rem] grid-cols-[minmax(0,1fr)_auto] items-center gap-3 px-4 sm:px-6 lg:flex lg:justify-between lg:px-12">
           <a href="/#top" className="group flex min-w-0 items-baseline gap-3">
             <span
@@ -70,6 +82,7 @@ export function Navbar() {
           </ul>
 
           <div className="flex shrink-0 items-center gap-3">
+            {user ? <><Link to="/my-consultations" className="hidden max-w-36 items-center gap-2 border-b border-gold/50 px-1 py-2 text-xs tracking-[0.08em] text-gold hover:text-ivory sm:flex"><UserRound className="size-4 shrink-0" /><span className="truncate">{name || user.displayName || "Account"}</span></Link><button type="button" aria-label="Sign out" title="Sign out" onClick={() => void customerSignOut()} className="hidden h-9 w-9 items-center justify-center text-ivory/70 hover:text-gold sm:flex"><LogOut className="size-4" /></button></> : <Link to="/sign-in" className="hidden items-center gap-2 border-b border-gold/50 px-1 py-2 text-xs uppercase tracking-[0.12em] text-gold hover:text-ivory sm:flex"><UserRound className="size-4" /> Sign In</Link>}
             <div className="hidden lg:block">
               <MagneticButton href="/book-consultation" variant="gold" className="px-6 py-3">
                 Book a Consultation
@@ -127,6 +140,7 @@ export function Navbar() {
               ))}
             </ul>
             <div className="mt-auto pt-10">
+              {user ? <><Link to="/my-consultations" onClick={() => setOpen(false)} className="mb-3 block border-b border-ivory/10 py-4 text-xl text-gold">{name || user.displayName || "My account"}</Link><Link to="/my-consultations" onClick={() => setOpen(false)} className="mb-4 block text-sm text-ivory/60">My consultations</Link><button onClick={() => { setOpen(false); void customerSignOut(); }} className="mb-4 block text-sm text-ivory/60">Sign out</button></> : <Link to="/sign-in" onClick={() => setOpen(false)} className="mb-4 block border-b border-ivory/10 py-4 text-xl text-gold">Sign in / Create account</Link>}
               <MagneticButton href="/book-consultation" variant="gold" onClick={() => setOpen(false)} className="w-full">
                 Book a Consultation
               </MagneticButton>

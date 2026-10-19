@@ -30,6 +30,10 @@ function AdminLayout() {
   const navigate = useNavigate();
 
   useEffect(() => {
+    if (auth.status === "unauthorized") {
+      sessionStorage.setItem("adminAccessDenied", "true");
+      navigate({ to: "/", replace: true });
+    }
     if (auth.status === "signed-out" || auth.status === "unconfigured") navigate({ to: "/admin/login", replace: true });
   }, [auth.status, navigate]);
 

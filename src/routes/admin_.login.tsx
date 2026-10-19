@@ -26,6 +26,10 @@ function AdminLogin() {
 
   useEffect(() => {
     if (auth.status === "admin") navigate({ to: "/admin", replace: true });
+    if (auth.status === "unauthorized") {
+      sessionStorage.setItem("adminAccessDenied", "true");
+      navigate({ to: "/", replace: true });
+    }
   }, [auth.status, navigate]);
 
   async function signIn() {
@@ -34,7 +38,6 @@ function AdminLogin() {
     setError(null);
     try {
       await adminSignInWithGoogle();
-      navigate({ to: "/admin", replace: true });
     } catch (err) {
       setError(authErrorMessage(err));
     } finally {

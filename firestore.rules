@@ -1,34 +1,30 @@
 rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
-
-    // Any authenticated Firebase user is an admin.
-    // Add / remove users in Firebase Console → Authentication → Users.
+    // Seed settings/admins with { emails: ["owner@example.com"] } in the
+    // Firebase console. Only listed, verified email accounts are admins.
     function isAdmin() {
-      return request.auth != null;
+      return request.auth != null
+        && request.auth.token.email_verified == true
+        && request.auth.token.email is string
+        && request.auth.token.email.lower() in get(/databases/$(database)/documents/settings/admins).data.emails;
     }
-
     function str(v, min, max) { return v is string && v.size() >= min && v.size() <= max; }
     function slotId(v) { return v.preferredDate + '_' + v.preferredTime; }
 
-    // ── Consultations ────────────────────────────────────────────────────────
     match /consultations/{id} {
-
-      // Authenticated admins can do everything.
       allow read, update, delete: if isAdmin();
-
-      // Admins can create any well-formed consultation (no field restrictions).
       allow create: if isAdmin();
-
-      // Unauthenticated visitors can only create a strictly validated request.
       allow create: if !isAdmin()
+        && request.auth != null
+        && request.resource.data.userId == request.auth.uid
+        && request.resource.data.customerId == request.auth.uid
         && id == request.resource.data.consultationId
         && request.resource.data.keys().hasOnly([
-             'consultationId','fullName','whatsappNumber','email',
-             'dateOfBirth','timeOfBirth','placeOfBirth','currentCity',
-             'consultationType','preferredDate','preferredTime',
-             'additionalMessage','source','status','createdAt','updatedAt'
-           ])
+          'consultationId','fullName','whatsappNumber','email','dateOfBirth','timeOfBirth',
+          'placeOfBirth','currentCity','consultationType','preferredDate','preferredTime',
+          'additionalMessage','source','status','createdAt','updatedAt','userId','customerId'
+        ])
         && str(request.resource.data.fullName, 2, 100)
         && request.resource.data.whatsappNumber.matches('^\\+[0-9]{7,18}$')
         && request.resource.data.email is string
@@ -44,32 +40,28 @@ service cloud.firestore {
         && request.resource.data.createdAt == request.time
         && get(/databases/$(database)/documents/availableSlots/$(slotId(request.resource.data))).data.enabled == true
         && getAfter(/databases/$(database)/documents/bookedSlots/$(slotId(request.resource.data))).data.consultationId == id;
+      allow read: if request.auth != null && resource.data.userId == request.auth.uid;
     }
-
-    // ── Other admin-only collections ─────────────────────────────────────────
-    match /customers/{id}     { allow read, write: if isAdmin(); }
+    match /customers/{uid} {
+      allow read: if isAdmin() || (request.auth != null && request.auth.uid == uid);
+      allow create, update: if isAdmin() || (request.auth != null && request.auth.uid == uid
+        && request.resource.data.uid == uid
+        && request.resource.data.keys().hasOnly(['uid','name','email','phone','birthDetails','updatedAt']));
+      allow delete: if isAdmin();
+    }
     match /notifications/{id} { allow read: if isAdmin(); allow write: if false; }
-
-    // Public visitors can view open times and minimal date/time reservations.
-    // Only admins can manage availability; a public reservation must be written
-    // in the same transaction as its consultation and reference an enabled slot.
-    match /availableSlots/{id} {
-      allow read: if true;
-      allow write: if isAdmin();
-    }
+    match /availableSlots/{id} { allow read: if true; allow write: if isAdmin(); }
     match /bookedSlots/{id} {
       allow read: if true;
       allow create: if isAdmin() || (!isAdmin()
-        && request.resource.data.keys().hasOnly(['date', 'time', 'consultationId'])
+        && request.resource.data.keys().hasOnly(['date','time','consultationId'])
         && id == request.resource.data.date + '_' + request.resource.data.time
         && get(/databases/$(database)/documents/availableSlots/$(id)).data.enabled == true
         && getAfter(/databases/$(database)/documents/consultations/$(request.resource.data.consultationId)).data.preferredDate == request.resource.data.date
         && getAfter(/databases/$(database)/documents/consultations/$(request.resource.data.consultationId)).data.preferredTime == request.resource.data.time);
       allow update, delete: if isAdmin();
     }
-
-    // settings/* is seeded automatically on first login — admins need write
-    // access so the client can create the document if it doesn't exist yet.
-    match /settings/{id}      { allow read: if isAdmin() || id == 'website'; allow write: if isAdmin(); }
+    match /settings/admins { allow read: if request.auth != null; allow write: if false; }
+    match /settings/{id} { allow read: if isAdmin() || id == 'website'; allow write: if isAdmin() && id != 'admins'; }
   }
 }

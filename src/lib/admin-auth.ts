@@ -9,6 +9,17 @@ import {
 } from "firebase/auth";
 import { getFirebaseAuth, isFirebaseConfigured } from "./firebase";
 import { ensureWhatsappSettings } from "./firestore-init";
+import { doc, getDoc } from "firebase/firestore";
+import { getFirebaseDb } from "./firebase";
+
+async function isAuthorizedAdmin(user: User) {
+  if (!user.email || !user.emailVerified) return false;
+  const snapshot = await getDoc(doc(getFirebaseDb(), "settings", "admins"));
+  const emails = snapshot.data()?.emails;
+  return Array.isArray(emails) && emails.some((email) =>
+    typeof email === "string" && email.toLowerCase() === user.email!.toLowerCase(),
+  );
+}
 
 /**
  * Any user who exists in Firebase Authentication is treated as an admin.
@@ -40,6 +51,7 @@ export type AdminState =
   | { status: "loading" }
   | { status: "signed-out" }
   | { status: "unconfigured" }
+  | { status: "unauthorized" }
   | { status: "admin"; user: User };
 
 export function useAdminAuth(): AdminState {
@@ -49,13 +61,15 @@ export function useAdminAuth(): AdminState {
       setState({ status: "unconfigured" });
       return;
     }
-    return onAuthStateChanged(getFirebaseAuth(), (user) => {
-      if (user) {
-        // Seed required Firestore documents on first login to a fresh database
-        ensureWhatsappSettings();
-        setState({ status: "admin", user });
-      } else {
-        setState({ status: "signed-out" });
+    return onAuthStateChanged(getFirebaseAuth(), async (user) => {
+      if (!user) { setState({ status: "signed-out" }); return; }
+      try {
+        if (await isAuthorizedAdmin(user)) {
+          ensureWhatsappSettings();
+          setState({ status: "admin", user });
+        } else setState({ status: "unauthorized" });
+      } catch {
+        setState({ status: "unauthorized" });
       }
     });
   }, []);

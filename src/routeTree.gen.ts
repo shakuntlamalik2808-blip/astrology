@@ -12,6 +12,8 @@ import { Route as rootRouteImport } from './routes/__root'
 import { Route as IndexRouteImport } from './routes/index'
 import { Route as AdminRouteImport } from './routes/admin'
 import { Route as BookConsultationRouteImport } from './routes/book-consultation'
+import { Route as MyConsultationsRouteImport } from './routes/my-consultations'
+import { Route as SignInRouteImport } from './routes/sign-in'
 import { Route as AdminIndexRouteImport } from './routes/admin.index'
 import { Route as AdminAccountsRouteImport } from './routes/admin.accounts'
 import { Route as AdminAvailabilityRouteImport } from './routes/admin.availability'
@@ -35,6 +37,16 @@ const AdminRoute = AdminRouteImport.update({
 const BookConsultationRoute = BookConsultationRouteImport.update({
   id: '/book-consultation',
   path: '/book-consultation',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const MyConsultationsRoute = MyConsultationsRouteImport.update({
+  id: '/my-consultations',
+  path: '/my-consultations',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const SignInRoute = SignInRouteImport.update({
+  id: '/sign-in',
+  path: '/sign-in',
   getParentRoute: () => rootRouteImport,
 } as any)
 const AdminIndexRoute = AdminIndexRouteImport.update({
@@ -87,6 +99,8 @@ export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
   '/admin': typeof AdminRouteWithChildren
   '/book-consultation': typeof BookConsultationRoute
+  '/my-consultations': typeof MyConsultationsRoute
+  '/sign-in': typeof SignInRoute
   '/admin/accounts': typeof AdminAccountsRoute
   '/admin/availability': typeof AdminAvailabilityRoute
   '/admin/consultations': typeof AdminConsultationsRoute
@@ -100,6 +114,8 @@ export interface FileRoutesByFullPath {
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/book-consultation': typeof BookConsultationRoute
+  '/my-consultations': typeof MyConsultationsRoute
+  '/sign-in': typeof SignInRoute
   '/admin/accounts': typeof AdminAccountsRoute
   '/admin/availability': typeof AdminAvailabilityRoute
   '/admin/consultations': typeof AdminConsultationsRoute
@@ -115,6 +131,8 @@ export interface FileRoutesById {
   '/': typeof IndexRoute
   '/admin': typeof AdminRouteWithChildren
   '/book-consultation': typeof BookConsultationRoute
+  '/my-consultations': typeof MyConsultationsRoute
+  '/sign-in': typeof SignInRoute
   '/admin/accounts': typeof AdminAccountsRoute
   '/admin/availability': typeof AdminAvailabilityRoute
   '/admin/consultations': typeof AdminConsultationsRoute
@@ -131,6 +149,8 @@ export interface FileRouteTypes {
     | '/'
     | '/admin'
     | '/book-consultation'
+    | '/my-consultations'
+    | '/sign-in'
     | '/admin/accounts'
     | '/admin/availability'
     | '/admin/consultations'
@@ -144,6 +164,8 @@ export interface FileRouteTypes {
   to:
     | '/'
     | '/book-consultation'
+    | '/my-consultations'
+    | '/sign-in'
     | '/admin/accounts'
     | '/admin/availability'
     | '/admin/consultations'
@@ -158,6 +180,8 @@ export interface FileRouteTypes {
     | '/'
     | '/admin'
     | '/book-consultation'
+    | '/my-consultations'
+    | '/sign-in'
     | '/admin/accounts'
     | '/admin/availability'
     | '/admin/consultations'
@@ -173,6 +197,8 @@ export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
   AdminRoute: typeof AdminRouteWithChildren
   BookConsultationRoute: typeof BookConsultationRoute
+  MyConsultationsRoute: typeof MyConsultationsRoute
+  SignInRoute: typeof SignInRoute
   AdminLoginRoute: typeof AdminLoginRoute
 }
 
@@ -197,6 +223,20 @@ declare module '@tanstack/react-router' {
       path: '/book-consultation'
       fullPath: '/book-consultation'
       preLoaderRoute: typeof BookConsultationRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/my-consultations': {
+      id: '/my-consultations'
+      path: '/my-consultations'
+      fullPath: '/my-consultations'
+      preLoaderRoute: typeof MyConsultationsRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/sign-in': {
+      id: '/sign-in'
+      path: '/sign-in'
+      fullPath: '/sign-in'
+      preLoaderRoute: typeof SignInRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/admin/': {
@@ -293,6 +333,8 @@ const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
   AdminRoute: AdminRouteWithChildren,
   BookConsultationRoute: BookConsultationRoute,
+  MyConsultationsRoute: MyConsultationsRoute,
+  SignInRoute: SignInRoute,
   AdminLoginRoute: AdminLoginRoute,
 }
 export const routeTree = rootRouteImport
