@@ -61,7 +61,7 @@ async function renderRemedyPdf(c, language, text) {
     @font-face{font-family:Remedy;src:url(data:font/woff;base64,${latinFont}) format('woff');unicode-range:U+0000-024F}
     @font-face{font-family:Remedy;src:url(data:font/woff;base64,${hindiFont}) format('woff');unicode-range:U+0900-097F,U+1CD0-1CFF,U+200C-200D,U+20A8,U+20B9,U+20F0,U+25CC,U+A830-A83F,U+A8E0-A8FF,U+11B00-11B09}
     @page{size:A4;margin:20mm}body{font-family:Remedy,sans-serif;color:#202633;font-size:11pt;line-height:1.75}.brand{font-size:9pt;letter-spacing:2px;text-transform:uppercase;color:#9a7937;border-bottom:1px solid #c9ad70;padding-bottom:12px}.title{font-size:22pt;font-weight:500;margin:28px 0 20px}.meta{border-block:1px solid #ddd;padding:14px 0;line-height:2}.label{font-weight:600}.remedies{margin-top:28px;line-height:2;padding-left:1.5em}.remedies li{padding:0 0 8px 6px}.remedies li::marker{color:#9a7937}.footer{margin-top:42px;padding-top:14px;border-top:1px solid #ddd;color:#777;font-size:9pt}
-  </style><main><div class="brand">Shakuntla Malik · Jyotish, Counseling & Astrology Academy</div><h1 class="title">${language === "Hindi" ? "ज्योतिषीय उपाय एवं मार्गदर्शन" : "Remedies & Guidance"}</h1><div class="meta"><div><span class="label">Reference:</span> ${escapeHtml(c.consultationId)}</div><div><span class="label">Client:</span> ${escapeHtml(c.fullName)}</div><div><span class="label">Consultation date:</span> ${escapeHtml(c.preferredDate)}</div><div><span class="label">Birth details:</span> ${escapeHtml(birth)}</div></div><ol class="remedies">${body}</ol><div class="footer">Prepared with care by Shakuntla Malik</div></main></html>`;
+  </style><main><div class="brand">Shakuntla Malik · Jyotish, Counseling & Astrology Academy</div><h1 class="title">${language === "Hindi" ? "ज्योतिषीय उपाय एवं मार्गदर्शन" : "Remedies & Guidance"}</h1><div class="meta"><div><span class="label">Reference:</span> ${escapeHtml(c.consultationId)}</div><div><span class="label">Client:</span> ${escapeHtml(c.memberName || c.fullName)}</div><div><span class="label">Consultation date:</span> ${escapeHtml(c.preferredDate)}</div><div><span class="label">Birth details:</span> ${escapeHtml(birth)}</div><div><span class="label">Valid until:</span> ${escapeHtml(c.validUntil || "")}</div></div><ol class="remedies">${body}</ol><div class="footer">Prepared with care by Shakuntla Malik</div></main></html>`;
   const browser = await puppeteer.launch({ args: chromium.args, defaultViewport: chromium.defaultViewport, executablePath: await chromium.executablePath(), headless: true });
   try {
     const page = await browser.newPage();
@@ -117,7 +117,6 @@ function buildMessage(c) {
     `Date of Birth: ${c.dateOfBirth}`,
     `Time of Birth: ${c.timeOfBirth || "Not provided"}`,
     `Place of Birth: ${c.placeOfBirth}`,
-    `Current City: ${c.currentCity}`,
     `Consultation Type: ${c.consultationType}`,
     `Preferred Date: ${c.preferredDate}`,
     `Preferred Time: ${c.preferredTime}`,
@@ -129,6 +128,65 @@ function buildMessage(c) {
     `Status: ${c.status || "New"}`,
     `Reference: ${c.consultationId}`,
   ].join("\n");
+}
+
+function escapeHtml(value) {
+  return String(value || "").replace(/[&<>"']/g, (character) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" })[character]);
+}
+
+async function dispatchBookingEmail({ consultation, recipient, role, subject, html, documentId }) {
+  const notification = db.collection("notifications").doc(documentId);
+  const previous = await notification.get();
+  if (previous.data()?.status === "Sent") return;
+  const base = {
+    notificationId: notification.id,
+    consultationId: consultation.consultationId,
+    recipient: recipient || (role === "customer" ? "Missing customer email" : "Admin email not configured"),
+    type: "email",
+    message: `Booking confirmation (${role})`,
+    createdAt: previous.data()?.createdAt || FieldValue.serverTimestamp(),
+    timestamp: FieldValue.serverTimestamp(),
+  };
+  await notification.set({ ...base, status: "Pending", error: null }, { merge: true });
+  try {
+    if (!recipient) throw new Error(role === "customer" ? "Customer email is missing." : "No admin email is configured in settings/admins.");
+    const apiKey = RESEND_API_KEY.value();
+    const from = REMEDY_EMAIL_FROM.value();
+    if (!apiKey || !from) throw new Error("Booking email sender is not configured.");
+    const response = await fetch("https://api.resend.com/emails", {
+      method: "POST", headers: { Authorization: `Bearer ${apiKey}`, "Content-Type": "application/json" },
+      body: JSON.stringify({ from, to: [recipient], subject, html }),
+    });
+    if (!response.ok) throw new Error(`Resend returned ${response.status}: ${(await response.text()).slice(0, 300)}`);
+    await notification.update({ status: "Sent", sentAt: FieldValue.serverTimestamp(), error: null });
+  } catch (error) {
+    await notification.update({ status: "Failed", error: String(error.message || error).slice(0, 500) });
+  }
+}
+
+async function sendBookingEmails(c) {
+  const person = c.memberName || c.fullName;
+  const relationship = c.relationship || "Self";
+  const birth = [c.dateOfBirth, c.timeOfBirth, c.placeOfBirth].filter(Boolean).join(" · ");
+  const validUntil = c.validUntil || "the next birthday";
+  const userHtml = `<p>Dear ${escapeHtml(c.bookedByName || c.fullName)},</p><p>We received your consultation booking request.</p><p><b>Reference:</b> ${escapeHtml(c.consultationId)}<br><b>Consultation for:</b> ${escapeHtml(person)} (${escapeHtml(relationship)})<br><b>Birth details:</b> ${escapeHtml(birth)}<br><b>Consultation:</b> ${escapeHtml(c.consultationType)}<br><b>Appointment:</b> ${escapeHtml(c.preferredDate)} at ${escapeHtml(c.preferredTime)}</p><p>This consultation and its prescribed remedies are valid until the consulted person’s upcoming birthday: <b>${escapeHtml(validUntil)}</b>.</p><p>Warm regards,<br>Shakuntla Malik</p>`;
+  const adminHtml = `<p>A new consultation booking has been received.</p><p><b>Reference:</b> ${escapeHtml(c.consultationId)}<br><b>Customer:</b> ${escapeHtml(c.bookedByName || c.fullName)}<br><b>Email:</b> ${escapeHtml(c.email)}<br><b>Phone:</b> ${escapeHtml(c.whatsappNumber)}<br><b>Consultation for:</b> ${escapeHtml(person)} (${escapeHtml(relationship)})<br><b>Birth details:</b> ${escapeHtml(birth)}<br><b>Consultation:</b> ${escapeHtml(c.consultationType)}<br><b>Booked slot:</b> ${escapeHtml(c.preferredDate)} at ${escapeHtml(c.preferredTime)}</p><p><b>Validity through:</b> ${escapeHtml(validUntil)}</p><p>${escapeHtml(c.additionalMessage || "")}</p>`;
+  const customerEmail = String(c.email || "").trim();
+  const tasks = [dispatchBookingEmail({
+    consultation: c, recipient: customerEmail, role: "customer", documentId: `${c.consultationId}_booking_email_customer`,
+    subject: `Consultation booking received · ${c.consultationId}`, html: userHtml,
+  })];
+  const settings = await db.collection("settings").doc("admins").get();
+  const admins = [...new Set((Array.isArray(settings.data()?.emails) ? settings.data().emails : []).filter((email) => typeof email === "string" && email.includes("@")).map((email) => email.trim().toLowerCase()))];
+  if (!admins.length) {
+    tasks.push(dispatchBookingEmail({ consultation: c, recipient: "", role: "admin", documentId: `${c.consultationId}_booking_email_admin`, subject: `New consultation booking · ${c.consultationId}`, html: adminHtml }));
+  } else {
+    admins.forEach((email, index) => tasks.push(dispatchBookingEmail({
+      consultation: c, recipient: email, role: "admin", documentId: `${c.consultationId}_booking_email_admin_${index}`,
+      subject: `New consultation booking · ${c.consultationId}`, html: adminHtml,
+    })));
+  }
+  await Promise.all(tasks);
 }
 
 async function upsertCustomer(c) {
@@ -148,7 +206,6 @@ async function upsertCustomer(c) {
     dateOfBirth: c.dateOfBirth,
     timeOfBirth: c.timeOfBirth || "",
     placeOfBirth: c.placeOfBirth,
-    currentCity: c.currentCity,
     source: c.source || "website",
     consultationIds: [c.consultationId],
     createdAt: FieldValue.serverTimestamp(),
@@ -158,20 +215,24 @@ async function upsertCustomer(c) {
 }
 
 exports.onConsultationCreated = onDocumentCreated(
-  { document: "consultations/{id}", region: "asia-south1", secrets: [WHATSAPP_API_TOKEN, WHATSAPP_PHONE_NUMBER_ID] },
+  { document: "consultations/{id}", region: "asia-south1", secrets: [WHATSAPP_API_TOKEN, WHATSAPP_PHONE_NUMBER_ID, RESEND_API_KEY] },
   async (event) => {
     const c = event.data?.data();
     if (!c) return;
 
     try {
-      const customerId = await upsertCustomer(c);
-      await event.data.ref.update({ customerId });
+      if (!c.customerId) {
+        const customerId = await upsertCustomer(c);
+        await event.data.ref.update({ customerId });
+      }
     } catch (e) {
       console.error("customer upsert failed", e);
     }
 
     // Manual entries are already visible to the owner who created them.
     if (c.source === "admin") return;
+
+    await sendBookingEmails(c);
 
     const message = buildMessage(c);
     const notifRef = db.collection("notifications").doc();

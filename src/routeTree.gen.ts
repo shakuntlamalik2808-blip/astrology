@@ -13,6 +13,7 @@ import { Route as IndexRouteImport } from './routes/index'
 import { Route as AdminRouteImport } from './routes/admin'
 import { Route as BookConsultationRouteImport } from './routes/book-consultation'
 import { Route as MyConsultationsRouteImport } from './routes/my-consultations'
+import { Route as ProfileRouteImport } from './routes/profile'
 import { Route as SignInRouteImport } from './routes/sign-in'
 import { Route as AdminIndexRouteImport } from './routes/admin.index'
 import { Route as AdminAccountsRouteImport } from './routes/admin.accounts'
@@ -42,6 +43,11 @@ const BookConsultationRoute = BookConsultationRouteImport.update({
 const MyConsultationsRoute = MyConsultationsRouteImport.update({
   id: '/my-consultations',
   path: '/my-consultations',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ProfileRoute = ProfileRouteImport.update({
+  id: '/profile',
+  path: '/profile',
   getParentRoute: () => rootRouteImport,
 } as any)
 const SignInRoute = SignInRouteImport.update({
@@ -100,6 +106,7 @@ export interface FileRoutesByFullPath {
   '/admin': typeof AdminRouteWithChildren
   '/book-consultation': typeof BookConsultationRoute
   '/my-consultations': typeof MyConsultationsRoute
+  '/profile': typeof ProfileRoute
   '/sign-in': typeof SignInRoute
   '/admin/accounts': typeof AdminAccountsRoute
   '/admin/availability': typeof AdminAvailabilityRoute
@@ -115,6 +122,7 @@ export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/book-consultation': typeof BookConsultationRoute
   '/my-consultations': typeof MyConsultationsRoute
+  '/profile': typeof ProfileRoute
   '/sign-in': typeof SignInRoute
   '/admin/accounts': typeof AdminAccountsRoute
   '/admin/availability': typeof AdminAvailabilityRoute
@@ -132,6 +140,7 @@ export interface FileRoutesById {
   '/admin': typeof AdminRouteWithChildren
   '/book-consultation': typeof BookConsultationRoute
   '/my-consultations': typeof MyConsultationsRoute
+  '/profile': typeof ProfileRoute
   '/sign-in': typeof SignInRoute
   '/admin/accounts': typeof AdminAccountsRoute
   '/admin/availability': typeof AdminAvailabilityRoute
@@ -150,6 +159,7 @@ export interface FileRouteTypes {
     | '/admin'
     | '/book-consultation'
     | '/my-consultations'
+    | '/profile'
     | '/sign-in'
     | '/admin/accounts'
     | '/admin/availability'
@@ -165,6 +175,7 @@ export interface FileRouteTypes {
     | '/'
     | '/book-consultation'
     | '/my-consultations'
+    | '/profile'
     | '/sign-in'
     | '/admin/accounts'
     | '/admin/availability'
@@ -181,6 +192,7 @@ export interface FileRouteTypes {
     | '/admin'
     | '/book-consultation'
     | '/my-consultations'
+    | '/profile'
     | '/sign-in'
     | '/admin/accounts'
     | '/admin/availability'
@@ -198,6 +210,7 @@ export interface RootRouteChildren {
   AdminRoute: typeof AdminRouteWithChildren
   BookConsultationRoute: typeof BookConsultationRoute
   MyConsultationsRoute: typeof MyConsultationsRoute
+  ProfileRoute: typeof ProfileRoute
   SignInRoute: typeof SignInRoute
   AdminLoginRoute: typeof AdminLoginRoute
 }
@@ -230,6 +243,13 @@ declare module '@tanstack/react-router' {
       path: '/my-consultations'
       fullPath: '/my-consultations'
       preLoaderRoute: typeof MyConsultationsRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/profile': {
+      id: '/profile'
+      path: '/profile'
+      fullPath: '/profile'
+      preLoaderRoute: typeof ProfileRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/sign-in': {
@@ -334,6 +354,7 @@ const rootRouteChildren: RootRouteChildren = {
   AdminRoute: AdminRouteWithChildren,
   BookConsultationRoute: BookConsultationRoute,
   MyConsultationsRoute: MyConsultationsRoute,
+  ProfileRoute: ProfileRoute,
   SignInRoute: SignInRoute,
   AdminLoginRoute: AdminLoginRoute,
 }

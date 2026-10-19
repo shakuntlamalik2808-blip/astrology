@@ -78,7 +78,6 @@ export const consultationSchema = z.object({
   dateOfBirth: z.string().min(1, "Please enter your date of birth."),
   timeOfBirth: z.string().optional().default(""),
   placeOfBirth: z.string().transform(clean).pipe(z.string().min(2, "Please enter your place of birth.").max(120)),
-  currentCity: z.string().transform(clean).pipe(z.string().min(2, "Please enter your current city.").max(120)),
   consultationType: z.string().min(2, "Please choose a consultation type.").max(100),
   preferredDate: z.string().min(1, "Please choose a preferred date."),
   preferredTime: z.string().min(1, "Please choose a preferred time."),
@@ -95,7 +94,6 @@ export type Consultation = {
   dateOfBirth: string;
   timeOfBirth: string;
   placeOfBirth: string;
-  currentCity: string;
   consultationType: string;
   preferredDate: string;
   preferredTime: string;
@@ -110,6 +108,12 @@ export type Consultation = {
   notes?: string;
   archived?: boolean;
   customerId?: string;
+  bookedByName?: string;
+  memberId?: string;
+  memberName?: string;
+  relationship?: string;
+  validFrom?: string;
+  validUntil?: string;
   remedyPdfUrl?: string;
   remediesHindi?: string;
   remediesEnglish?: string;
@@ -132,11 +136,30 @@ export function makeConsultationId() {
 
 export const bookingSlotId = (date: string, time: string) => `${date}_${time}`;
 
+/** Validity starts on the consultation date and ends at the next birthday after it. */
+export function calculateBirthdayValidity(dateOfBirth: string, validFrom: string) {
+  const [birthYear, birthMonth, birthDay] = dateOfBirth.split("-").map(Number);
+  const [year, month, day] = validFrom.split("-").map(Number);
+  if (![birthYear, birthMonth, birthDay, year, month, day].every(Number.isInteger)) {
+    throw new Error("Enter a valid birth date and consultation date.");
+  }
+  const start = Date.UTC(year, month - 1, day);
+  let birthdayYear = year;
+  let birthday = Date.UTC(birthdayYear, birthMonth - 1, birthDay);
+  if (birthday <= start) birthday = Date.UTC(++birthdayYear, birthMonth - 1, birthDay);
+  const iso = (time: number) => new Date(time).toISOString().slice(0, 10);
+  return { validFrom: iso(start), validUntil: iso(birthday) };
+}
+
 const LAST_KEY = "ss_last_submission";
 
 /** Writes the consultation. Customer linking + WhatsApp happen server-side (Cloud Function). */
-export async function submitConsultation(data: ConsultationData, userId: string): Promise<string> {
-  const fingerprint = `${data.email}|${data.phone}|${data.consultationType}|${data.preferredDate}|${data.preferredTime}`;
+export async function submitConsultation(
+  data: ConsultationData,
+  userId: string,
+  member: { memberId: string; memberName: string; relationship: string; validFrom: string; validUntil: string; bookedByName: string },
+): Promise<string> {
+  const fingerprint = `${userId}|${member.memberId}|${data.email}|${data.phone}|${data.consultationType}|${data.preferredDate}|${data.preferredTime}`;
   const slotId = bookingSlotId(data.preferredDate, data.preferredTime);
   try {
     const last = JSON.parse(localStorage.getItem(LAST_KEY) ?? "null") as { f: string; t: number; id: string } | null;
@@ -218,7 +241,6 @@ export async function submitConsultation(data: ConsultationData, userId: string)
         dateOfBirth: data.dateOfBirth,
         timeOfBirth: data.timeOfBirth ?? "",
         placeOfBirth: data.placeOfBirth,
-        currentCity: data.currentCity,
         consultationType: data.consultationType,
         preferredDate: data.preferredDate,
         preferredTime: data.preferredTime,
@@ -229,6 +251,7 @@ export async function submitConsultation(data: ConsultationData, userId: string)
         updatedAt: serverTimestamp(),
         userId,
         customerId: userId,
+        ...member,
       });
       logBookingDebug("log", "transaction_write_queued", {
         referenceId: id,

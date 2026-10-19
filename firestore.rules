@@ -22,15 +22,21 @@ service cloud.firestore {
         && id == request.resource.data.consultationId
         && request.resource.data.keys().hasOnly([
           'consultationId','fullName','whatsappNumber','email','dateOfBirth','timeOfBirth',
-          'placeOfBirth','currentCity','consultationType','preferredDate','preferredTime',
-          'additionalMessage','source','status','createdAt','updatedAt','userId','customerId'
+          'placeOfBirth','consultationType','preferredDate','preferredTime','memberId','memberName',
+          'relationship','validFrom','validUntil','bookedByName','additionalMessage','source','status','createdAt',
+          'updatedAt','userId','customerId'
         ])
         && str(request.resource.data.fullName, 2, 100)
         && request.resource.data.whatsappNumber.matches('^\\+[0-9]{7,18}$')
         && request.resource.data.email is string
         && (request.resource.data.email == '' || request.resource.data.email.matches('^[^@\\s]+@[^@\\s]+\\.[^@\\s]+$'))
         && str(request.resource.data.placeOfBirth, 2, 120)
-        && str(request.resource.data.currentCity, 2, 120)
+        && str(request.resource.data.memberId, 1, 100)
+        && str(request.resource.data.memberName, 2, 100)
+        && str(request.resource.data.bookedByName, 2, 100)
+        && request.resource.data.relationship in ['Self','Spouse','Child','Parent','Friend','Other']
+        && str(request.resource.data.validFrom, 10, 10)
+        && str(request.resource.data.validUntil, 10, 10)
         && str(request.resource.data.consultationType, 2, 100)
         && str(request.resource.data.preferredDate, 10, 10)
         && str(request.resource.data.preferredTime, 4, 8)
@@ -46,7 +52,8 @@ service cloud.firestore {
       allow read: if isAdmin() || (request.auth != null && request.auth.uid == uid);
       allow create, update: if isAdmin() || (request.auth != null && request.auth.uid == uid
         && request.resource.data.uid == uid
-        && request.resource.data.keys().hasOnly(['uid','name','email','phone','birthDetails','updatedAt']));
+        && request.resource.data.keys().hasOnly(['uid','name','email','phone','gender','birthDetails','members','updatedAt'])
+        && (!('members' in request.resource.data) || (request.resource.data.members is list && request.resource.data.members.size() <= 50)));
       allow delete: if isAdmin();
     }
     match /notifications/{id} { allow read: if isAdmin(); allow write: if false; }

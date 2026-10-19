@@ -9,6 +9,7 @@ import {
   COUNTRY_CODES,
   bookingErrorDetails,
   bookingSlotId,
+  calculateBirthdayValidity,
   consultationSchema,
   formatDate,
   formatTime,
@@ -19,7 +20,7 @@ import {
 import { getMissingFirebaseConfigKeys, isFirebaseConfigured } from "@/lib/firebase-config";
 import { getFirebaseDb } from "@/lib/firebase";
 import { useWebsiteSettings, WebsiteSettingsProvider } from "@/lib/website-settings";
-import { useCustomerAuth, saveCustomerProfile } from "@/lib/customer-auth";
+import { useCustomerAuth, saveCustomerMembers, saveCustomerProfile, type CustomerMember } from "@/lib/customer-auth";
 import { doc, getDoc } from "firebase/firestore";
 
 const title = "Book a Consultation — Shakuntla Malik";
@@ -48,7 +49,6 @@ const empty: ConsultationInput = {
   dateOfBirth: "",
   timeOfBirth: "",
   placeOfBirth: "",
-  currentCity: "",
   consultationType: "" as ConsultationInput["consultationType"],
   preferredDate: "",
   preferredTime: "",
@@ -68,7 +68,6 @@ function formValuesForDebug(values: ConsultationInput) {
     dateOfBirth: values.dateOfBirth ? "[redacted]" : "",
     timeOfBirth: values.timeOfBirth ? "[redacted]" : "",
     placeOfBirth: values.placeOfBirth ? "[redacted]" : "",
-    currentCity: values.currentCity ? "[redacted]" : "",
     consultationType: values.consultationType,
     preferredDate: values.preferredDate,
     preferredTime: values.preferredTime,
@@ -87,22 +86,32 @@ function BookPage() {
   const submitLock = useRef(false);
   const submitErrorRef = useRef<HTMLParagraphElement>(null);
   const [values, setValues] = useState<ConsultationInput>(empty);
+  const [savedProfile, setSavedProfile] = useState<{ name: string; birthDetails: { dateOfBirth?: string; timeOfBirth?: string; placeOfBirth?: string } } | null>(null);
+  const [members, setMembers] = useState<CustomerMember[]>([]);
+  const [selectedMemberId, setSelectedMemberId] = useState("self");
+  const [newRelationship, setNewRelationship] = useState<CustomerMember["relationship"]>("Other");
+  const [newMemberNotes, setNewMemberNotes] = useState("");
   useEffect(() => {
     if (!user) return;
     void getDoc(doc(getFirebaseDb(), "customers", user.uid)).then((snapshot) => {
       const profile = snapshot.data();
       const birth = profile?.birthDetails ?? {};
+      const savedMembers = Array.isArray(profile?.members) ? profile.members as CustomerMember[] : [];
+      const requestedMemberId = typeof window === "undefined" ? null : new URLSearchParams(window.location.search).get("memberId");
+      const requestedMember = savedMembers.find((member) => member.id === requestedMemberId);
+      setSavedProfile({ name: profile?.name || user.displayName || "", birthDetails: birth });
+      setMembers(savedMembers);
+      setSelectedMemberId(requestedMember?.id ?? "self");
       const rawPhone = String(profile?.phone ?? "");
       const matchedCode = COUNTRY_CODES.find((item) => rawPhone.startsWith(item.code));
       setValues((current) => ({ ...current,
-        fullName: current.fullName || profile?.name || user.displayName || "",
+        fullName: current.fullName || requestedMember?.name || profile?.name || user.displayName || "",
         email: current.email || user.email || "",
         countryCode: current.phone ? current.countryCode : (matchedCode?.code ?? current.countryCode),
         phone: current.phone || (matchedCode ? rawPhone.slice(matchedCode.code.length).replace(/\D/g, "") : rawPhone.replace(/\D/g, "")),
-        dateOfBirth: current.dateOfBirth || birth.dateOfBirth || "",
-        timeOfBirth: current.timeOfBirth || birth.timeOfBirth || "",
-        placeOfBirth: current.placeOfBirth || birth.placeOfBirth || "",
-        currentCity: current.currentCity || birth.currentCity || "",
+        dateOfBirth: current.dateOfBirth || requestedMember?.dateOfBirth || birth.dateOfBirth || "",
+        timeOfBirth: current.timeOfBirth || requestedMember?.timeOfBirth || birth.timeOfBirth || "",
+        placeOfBirth: current.placeOfBirth || requestedMember?.placeOfBirth || birth.placeOfBirth || "",
       }));
     }).catch(() => {});
   }, [user]);
@@ -189,6 +198,23 @@ function BookPage() {
     if (submitError) setSubmitError(null);
   };
 
+  function chooseConsultationPerson(id: string) {
+    setSelectedMemberId(id);
+    if (id === "new") {
+      setValues((current) => ({ ...current, fullName: "", dateOfBirth: "", timeOfBirth: "", placeOfBirth: "" }));
+      return;
+    }
+    const member = members.find((item) => item.id === id);
+    const birth = member ?? savedProfile?.birthDetails;
+    setValues((current) => ({
+      ...current,
+      fullName: member?.name || savedProfile?.name || current.fullName,
+      dateOfBirth: member?.dateOfBirth || birth?.dateOfBirth || "",
+      timeOfBirth: member?.timeOfBirth || birth?.timeOfBirth || "",
+      placeOfBirth: member?.placeOfBirth || birth?.placeOfBirth || "",
+    }));
+  }
+
   const showSubmitError = (message: string) => {
     setSubmitError(message);
     setSubmitErrorSequence((sequence) => sequence + 1);
@@ -274,12 +300,36 @@ function BookPage() {
     setSubmitting(true);
     try {
       if (!isFirebaseConfigured()) throw new Error("not configured");
+      const chosenMember = members.find((member) => member.id === selectedMemberId);
+      let memberId = chosenMember?.id ?? "self";
+      let relationship = chosenMember?.relationship ?? "Self";
+      if (selectedMemberId === "new") {
+        memberId = crypto.randomUUID();
+        relationship = newRelationship;
+        const newMember: CustomerMember = {
+          id: memberId, name: parsed.data.fullName, relationship: newRelationship,
+          dateOfBirth: parsed.data.dateOfBirth, timeOfBirth: parsed.data.timeOfBirth ?? "",
+          placeOfBirth: parsed.data.placeOfBirth, notes: newMemberNotes.trim(),
+        };
+        const updatedMembers = [...members, newMember];
+        await saveCustomerMembers(user, updatedMembers);
+        setMembers(updatedMembers);
+      }
+      const validity = calculateBirthdayValidity(parsed.data.dateOfBirth, parsed.data.preferredDate);
       await saveCustomerProfile(user, {
-        name: parsed.data.fullName,
+        name: savedProfile?.name || parsed.data.fullName,
         phone: `${parsed.data.countryCode}${parsed.data.phone}`,
-        birthDetails: { dateOfBirth: parsed.data.dateOfBirth, timeOfBirth: parsed.data.timeOfBirth ?? "", placeOfBirth: parsed.data.placeOfBirth, currentCity: parsed.data.currentCity },
+        birthDetails: selectedMemberId === "self" ? { dateOfBirth: parsed.data.dateOfBirth, timeOfBirth: parsed.data.timeOfBirth ?? "", placeOfBirth: parsed.data.placeOfBirth } : {
+          dateOfBirth: savedProfile?.birthDetails.dateOfBirth || "",
+          timeOfBirth: savedProfile?.birthDetails.timeOfBirth || "",
+          placeOfBirth: savedProfile?.birthDetails.placeOfBirth || "",
+        },
       });
-      const id = await submitConsultation(parsed.data, user.uid);
+      const id = await submitConsultation(parsed.data, user.uid, {
+        memberId, memberName: parsed.data.fullName, relationship,
+        bookedByName: savedProfile?.name || user.displayName || parsed.data.fullName,
+        validFrom: validity.validFrom, validUntil: validity.validUntil,
+      });
       logBookingDebug("log", "form_submission_success", { referenceId: id, slotId: selectedSlotId });
       setDone({ id, firstName: parsed.data.fullName.split(" ")[0] ?? "" });
       window.scrollTo({ top: 0, behavior: reduced ? "auto" : "smooth" });
@@ -383,7 +433,24 @@ function BookPage() {
                   className="mt-10 rounded-sm border border-ivory/12 bg-ink-soft/60 p-4 backdrop-blur-sm sm:mt-14 sm:p-6 md:p-10"
                 >
                   <Group title="Personal information">
-                    <Field id="fullName" label="Full name" error={errors.fullName} full>
+                    <Field id="consultationFor" label="Who is this consultation for?" full>
+                      <select id="f-consultationFor" value={selectedMemberId} onChange={(event) => chooseConsultationPerson(event.target.value)} className={inputCls}>
+                        <option value="self" className="bg-ink">Myself</option>
+                        {members.map((member) => <option key={member.id} value={member.id} className="bg-ink">{member.name} · {member.relationship}</option>)}
+                        <option value="new" className="bg-ink">+ Add New Member</option>
+                      </select>
+                    </Field>
+                    {selectedMemberId === "new" && <>
+                      <Field id="memberRelationship" label="Relationship">
+                        <select value={newRelationship} onChange={(event) => setNewRelationship(event.target.value as CustomerMember["relationship"])} className={inputCls}>
+                          {["Spouse", "Child", "Parent", "Friend", "Other"].map((relationship) => <option key={relationship} className="bg-ink">{relationship}</option>)}
+                        </select>
+                      </Field>
+                      <Field id="memberNotes" label="Notes (optional)">
+                        <input value={newMemberNotes} onChange={(event) => setNewMemberNotes(event.target.value)} className={inputCls} />
+                      </Field>
+                    </>}
+                    <Field id="fullName" label="Person’s full name" error={errors.fullName} full>
                       <input id="f-fullName" autoComplete="name" value={values.fullName} onChange={(e) => set("fullName")(e.target.value)} className={inputCls} />
                     </Field>
                     <Field id="phone" label="WhatsApp number" error={errors.phone}>
@@ -404,9 +471,6 @@ function BookPage() {
                     </Field>
                     <Field id="placeOfBirth" label="Place of birth" error={errors.placeOfBirth}>
                       <input id="f-placeOfBirth" value={values.placeOfBirth} onChange={(e) => set("placeOfBirth")(e.target.value)} className={inputCls} />
-                    </Field>
-                    <Field id="currentCity" label="Current city" error={errors.currentCity}>
-                      <input id="f-currentCity" autoComplete="address-level2" value={values.currentCity} onChange={(e) => set("currentCity")(e.target.value)} className={inputCls} />
                     </Field>
                   </Group>
 

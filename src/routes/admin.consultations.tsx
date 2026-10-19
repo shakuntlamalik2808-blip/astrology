@@ -8,6 +8,7 @@ import { getFirebaseApp, getFirebaseDb } from "@/lib/firebase";
 import {
   CONSULTATION_TYPES,
   COUNTRY_CODES,
+  calculateBirthdayValidity,
   PAYMENT_STATUSES,
   STATUSES,
   consultationSchema,
@@ -64,7 +65,6 @@ const emptyForm: AdminForm = {
   dateOfBirth: "",
   timeOfBirth: "",
   placeOfBirth: "",
-  currentCity: "",
   consultationType: "" as ConsultationInput["consultationType"],
   preferredDate: "",
   preferredTime: "",
@@ -105,7 +105,6 @@ function rowToForm(row: Row): AdminForm {
     dateOfBirth: row.dateOfBirth,
     timeOfBirth: row.timeOfBirth,
     placeOfBirth: row.placeOfBirth,
-    currentCity: row.currentCity,
     consultationType: row.consultationType as AdminForm["consultationType"],
     preferredDate: row.preferredDate,
     preferredTime: row.preferredTime,
@@ -137,7 +136,7 @@ function ConsultationsPage() {
       .filter((row) => (showArchived ? row.archived : !row.archived))
       .filter((row) => status === "All" || row.status === status)
       .filter((row) => type === "All" || row.consultationType === type)
-      .filter((row) => !term || [row.fullName, row.email, row.whatsappNumber, row.consultationId, row.currentCity].some((value) => value?.toLowerCase().includes(term)))
+      .filter((row) => !term || [row.fullName, row.email, row.whatsappNumber, row.consultationId].some((value) => value?.toLowerCase().includes(term)))
       .sort((a, b) => {
         if (sort === "fullName") return a.fullName.localeCompare(b.fullName);
         if (sort === "preferredDate") return (a.preferredDate + a.preferredTime).localeCompare(b.preferredDate + b.preferredTime);
@@ -244,7 +243,10 @@ function ConsultationForm({ mode, initial, row, onClose }: { mode: "create" | "e
       dateOfBirth: data.dateOfBirth,
       timeOfBirth: data.timeOfBirth ?? "",
       placeOfBirth: data.placeOfBirth,
-      currentCity: data.currentCity,
+          memberId: row?.memberId || "self",
+          memberName: row?.memberName || data.fullName,
+          relationship: row?.relationship || "Self",
+          ...calculateBirthdayValidity(data.dateOfBirth, data.preferredDate),
       consultationType: data.consultationType,
       preferredDate: data.preferredDate,
       preferredTime: data.preferredTime,
@@ -341,7 +343,6 @@ function ConsultationForm({ mode, initial, row, onClose }: { mode: "create" | "e
           <FormField label="Date of birth" error={errors.dateOfBirth}><input type="date" value={form.dateOfBirth} onChange={(event) => set("dateOfBirth")(event.target.value)} className={inputClass} /></FormField>
           <FormField label="Time of birth"><input type="time" value={form.timeOfBirth} onChange={(event) => set("timeOfBirth")(event.target.value)} className={inputClass} /></FormField>
           <FormField label="Place of birth" error={errors.placeOfBirth}><input value={form.placeOfBirth} onChange={(event) => set("placeOfBirth")(event.target.value)} className={inputClass} /></FormField>
-          <FormField label="Current city" error={errors.currentCity}><input value={form.currentCity} onChange={(event) => set("currentCity")(event.target.value)} className={inputClass} /></FormField>
         </FormSection>
 
         <FormSection title="Consultation details">
@@ -454,7 +455,7 @@ function RemediesEditor({ row }: { row: Row }) {
     const content = selected;
     const safe = (value: string) => value.replace(/[&<>"']/g, (char) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" })[char]!);
     const remedyItems = content.split(/\r?\n/).map((line) => line.trim()).filter(Boolean).map((line) => `<li>${safe(line)}</li>`).join("");
-    const body = `<!doctype html><html lang="${language === "Hindi" ? "hi" : "en"}"><meta charset="utf-8"><title>Remedies — ${safe(row.consultationId)}</title><style>@import url('https://fonts.googleapis.com/css2?family=Noto+Sans+Devanagari:wght@400;500;600&family=Playfair+Display:wght@500;600&display=swap');body{font-family:'Noto Sans Devanagari',serif;color:#18202b;margin:0}.page{max-width:760px;margin:48px auto;padding:52px;border:1px solid #c6a96b}.brand{color:#a7833d;letter-spacing:.18em;text-transform:uppercase;font-size:12px}.title{font-family:'Playfair Display',serif;font-size:30px;margin:8px 0 26px}.meta{border-block:1px solid #ddd;padding:16px 0;line-height:1.8}.remedies{line-height:1.9;margin-top:24px;padding-left:1.5em}.remedies li{padding:0 0 10px 6px}.remedies li::marker{color:#a7833d}.footer{margin-top:42px;color:#777;font-size:12px}@media print{.page{margin:0 auto;border:0}}</style><main class="page"><div class="brand">Shakuntla Malik · Jyotish, Counseling & Astrology Academy</div><h1 class="title">${language === "Hindi" ? "ज्योतिषीय उपाय एवं मार्गदर्शन" : "Remedies & Guidance"}</h1><div class="meta"><b>Reference:</b> ${safe(row.consultationId)}<br><b>Client:</b> ${safe(row.fullName)}<br><b>Date:</b> ${safe(formatDate(row.preferredDate))}<br><b>Birth details:</b> ${safe([row.dateOfBirth, row.timeOfBirth, row.placeOfBirth].filter(Boolean).join(" · "))}</div><ol class="remedies">${remedyItems}</ol><div class="footer">Prepared with care by Shakuntla Malik</div></main><script>window.onload=()=>document.fonts.ready.then(()=>window.print())</script></html>`;
+    const body = `<!doctype html><html lang="${language === "Hindi" ? "hi" : "en"}"><meta charset="utf-8"><title>Remedies — ${safe(row.consultationId)}</title><style>@import url('https://fonts.googleapis.com/css2?family=Noto+Sans+Devanagari:wght@400;500;600&family=Playfair+Display:wght@500;600&display=swap');body{font-family:'Noto Sans Devanagari',serif;color:#18202b;margin:0}.page{max-width:760px;margin:48px auto;padding:52px;border:1px solid #c6a96b}.brand{color:#a7833d;letter-spacing:.18em;text-transform:uppercase;font-size:12px}.title{font-family:'Playfair Display',serif;font-size:30px;margin:8px 0 26px}.meta{border-block:1px solid #ddd;padding:16px 0;line-height:1.8}.remedies{line-height:1.9;margin-top:24px;padding-left:1.5em}.remedies li{padding:0 0 10px 6px}.remedies li::marker{color:#a7833d}.footer{margin-top:42px;color:#777;font-size:12px}@media print{.page{margin:0 auto;border:0}}</style><main class="page"><div class="brand">Shakuntla Malik · Jyotish, Counseling & Astrology Academy</div><h1 class="title">${language === "Hindi" ? "ज्योतिषीय उपाय एवं मार्गदर्शन" : "Remedies & Guidance"}</h1><div class="meta"><b>Reference:</b> ${safe(row.consultationId)}<br><b>Client:</b> ${safe(row.memberName || row.fullName)}<br><b>Date:</b> ${safe(formatDate(row.preferredDate))}<br><b>Birth details:</b> ${safe([row.dateOfBirth, row.timeOfBirth, row.placeOfBirth].filter(Boolean).join(" · "))}<br><b>Valid until:</b> ${safe(formatDate(row.validUntil))}</div><ol class="remedies">${remedyItems}</ol><div class="footer">Prepared with care by Shakuntla Malik</div></main><script>window.onload=()=>document.fonts.ready.then(()=>window.print())</script></html>`;
     const url = URL.createObjectURL(new Blob([body], { type: "text/html" }));
     window.open(url, "_blank", "noopener,noreferrer");
   }

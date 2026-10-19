@@ -82,7 +82,7 @@ export function Navbar() {
           </ul>
 
           <div className="flex shrink-0 items-center gap-3">
-            {user ? <><Link to="/my-consultations" className="hidden max-w-36 items-center gap-2 border-b border-gold/50 px-1 py-2 text-xs tracking-[0.08em] text-gold hover:text-ivory sm:flex"><UserRound className="size-4 shrink-0" /><span className="truncate">{name || user.displayName || "Account"}</span></Link><button type="button" aria-label="Sign out" title="Sign out" onClick={() => void customerSignOut()} className="hidden h-9 w-9 items-center justify-center text-ivory/70 hover:text-gold sm:flex"><LogOut className="size-4" /></button></> : <Link to="/sign-in" className="hidden items-center gap-2 border-b border-gold/50 px-1 py-2 text-xs uppercase tracking-[0.12em] text-gold hover:text-ivory sm:flex"><UserRound className="size-4" /> Sign In</Link>}
+            {user ? <><Link to="/profile" className="hidden max-w-36 items-center gap-2 border-b border-gold/50 px-1 py-2 text-xs tracking-[0.08em] text-gold hover:text-ivory sm:flex"><UserRound className="size-4 shrink-0" /><span className="truncate">{name || user.displayName || "Account"}</span></Link><button type="button" aria-label="Sign out" title="Sign out" onClick={() => void customerSignOut()} className="hidden h-9 w-9 items-center justify-center text-ivory/70 hover:text-gold sm:flex"><LogOut className="size-4" /></button></> : <Link to="/sign-in" className="hidden items-center gap-2 border-b border-gold/50 px-1 py-2 text-xs uppercase tracking-[0.12em] text-gold hover:text-ivory sm:flex"><UserRound className="size-4" /> Sign In</Link>}
             <div className="hidden lg:block">
               <MagneticButton href="/book-consultation" variant="gold" className="px-6 py-3">
                 Book a Consultation
@@ -140,7 +140,7 @@ export function Navbar() {
               ))}
             </ul>
             <div className="mt-auto pt-10">
-              {user ? <><Link to="/my-consultations" onClick={() => setOpen(false)} className="mb-3 block border-b border-ivory/10 py-4 text-xl text-gold">{name || user.displayName || "My account"}</Link><Link to="/my-consultations" onClick={() => setOpen(false)} className="mb-4 block text-sm text-ivory/60">My consultations</Link><button onClick={() => { setOpen(false); void customerSignOut(); }} className="mb-4 block text-sm text-ivory/60">Sign out</button></> : <Link to="/sign-in" onClick={() => setOpen(false)} className="mb-4 block border-b border-ivory/10 py-4 text-xl text-gold">Sign in / Create account</Link>}
+              {user ? <><Link to="/profile" onClick={() => setOpen(false)} className="mb-3 block border-b border-ivory/10 py-4 text-xl text-gold">{name || user.displayName || "My account"}</Link><Link to="/my-consultations" onClick={() => setOpen(false)} className="mb-4 block text-sm text-ivory/60">My consultations</Link><button onClick={() => { setOpen(false); void customerSignOut(); }} className="mb-4 block text-sm text-ivory/60">Sign out</button></> : <Link to="/sign-in" onClick={() => setOpen(false)} className="mb-4 block border-b border-ivory/10 py-4 text-xl text-gold">Sign in / Create account</Link>}
               <MagneticButton href="/book-consultation" variant="gold" onClick={() => setOpen(false)} className="w-full">
                 Book a Consultation
               </MagneticButton>

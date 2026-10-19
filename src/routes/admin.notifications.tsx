@@ -22,7 +22,7 @@ function NotificationsPage() {
   return (
     <div>
       <h1 className="display text-3xl">Notifications</h1>
-      <p className="mt-2 text-sm text-muted-foreground">WhatsApp alerts sent to the admin for each website consultation request.</p>
+      <p className="mt-2 text-sm text-muted-foreground">Booking confirmation emails and WhatsApp delivery history.</p>
       {error && <p className="mt-4 text-sm text-destructive">{error}</p>}
       <div className="mt-6 space-y-3">
         {rows?.map((n) => (

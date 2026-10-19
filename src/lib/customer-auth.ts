@@ -3,9 +3,20 @@ import { doc, getDoc, onSnapshot, setDoc, serverTimestamp } from "firebase/fires
 import { useEffect, useState } from "react";
 import { getFirebaseAuth, getFirebaseDb, isFirebaseConfigured } from "./firebase";
 
+export type CustomerMember = {
+  id: string;
+  name: string;
+  relationship: "Spouse" | "Child" | "Parent" | "Friend" | "Other";
+  dateOfBirth: string;
+  timeOfBirth: string;
+  placeOfBirth: string;
+  notes?: string;
+};
+
 export type CustomerProfile = {
-  uid: string; name: string; email: string; phone: string;
-  birthDetails: { dateOfBirth: string; timeOfBirth: string; placeOfBirth: string; currentCity: string };
+  uid: string; name: string; email: string; phone: string; gender?: string;
+  birthDetails: { dateOfBirth: string; timeOfBirth: string; placeOfBirth: string };
+  members?: CustomerMember[];
 };
 
 export function useCustomerAuth() {
@@ -41,7 +52,7 @@ export async function customerSignIn() {
   await setDoc(ref, {
     uid: user.uid, name: old?.name || user.displayName || "", email: user.email || "",
     phone: old?.phone || "", birthDetails: old?.birthDetails || {
-      dateOfBirth: "", timeOfBirth: "", placeOfBirth: "", currentCity: "",
+      dateOfBirth: "", timeOfBirth: "", placeOfBirth: "",
     }, updatedAt: serverTimestamp(),
   }, { merge: true });
   return user;
@@ -72,7 +83,7 @@ async function ensureProfile(user: User) {
   if (snapshot.exists()) return;
   await setDoc(ref, {
     uid: user.uid, name: user.displayName || "", email: user.email || "", phone: "",
-    birthDetails: { dateOfBirth: "", timeOfBirth: "", placeOfBirth: "", currentCity: "" },
+    birthDetails: { dateOfBirth: "", timeOfBirth: "", placeOfBirth: "" },
     updatedAt: serverTimestamp(),
   });
 }
@@ -81,6 +92,12 @@ export async function saveCustomerProfile(user: User, profile: Omit<CustomerProf
   await setDoc(doc(getFirebaseDb(), "customers", user.uid), {
     uid: user.uid, name: profile.name, email: user.email || "", phone: profile.phone,
     birthDetails: profile.birthDetails, updatedAt: serverTimestamp(),
+  }, { merge: true });
+}
+
+export async function saveCustomerMembers(user: User, members: CustomerMember[]) {
+  await setDoc(doc(getFirebaseDb(), "customers", user.uid), {
+    uid: user.uid, members, updatedAt: serverTimestamp(),
   }, { merge: true });
 }
 

@@ -12,7 +12,7 @@ export const Route = createFileRoute("/sign-in")({
 });
 
 type Mode = "sign-in" | "create-account";
-const empty = { name: "", email: "", countryCode: "+91", phone: "", password: "", dateOfBirth: "", timeOfBirth: "", placeOfBirth: "", currentCity: "" };
+const empty = { name: "", email: "", countryCode: "+91", phone: "", password: "", dateOfBirth: "", timeOfBirth: "", placeOfBirth: "" };
 const inputClass = "mt-2 min-h-12 w-full rounded-sm border border-ivory/20 bg-ink/60 px-4 text-base text-ivory placeholder:text-ivory/35 focus:border-gold focus:outline-none focus:ring-1 focus:ring-gold/60 [color-scheme:dark]";
 
 function SignInPage() {
@@ -50,10 +50,10 @@ function SignInPage() {
         const digits = values.phone.replace(/\D/g, "");
         if (values.name.trim().length < 2) throw new Error("Enter your full name.");
         if (digits.length < 6 || digits.length > 14) throw new Error("Enter a valid phone number.");
-        if (!values.dateOfBirth || values.placeOfBirth.trim().length < 2 || values.currentCity.trim().length < 2) throw new Error("Complete your birth date, place of birth, and current city.");
+        if (!values.dateOfBirth || values.placeOfBirth.trim().length < 2) throw new Error("Complete your birth date and place of birth.");
         await customerRegisterWithEmail({
           name: values.name, email: values.email, phone: `${values.countryCode}${digits}`, password: values.password,
-          birthDetails: { dateOfBirth: values.dateOfBirth, timeOfBirth: values.timeOfBirth, placeOfBirth: values.placeOfBirth, currentCity: values.currentCity },
+          birthDetails: { dateOfBirth: values.dateOfBirth, timeOfBirth: values.timeOfBirth, placeOfBirth: values.placeOfBirth },
         });
       }
       navigate({ to: destination, replace: true });
@@ -84,7 +84,6 @@ function SignInPage() {
           <label className="text-sm">Date of birth<input required type="date" max={new Date().toISOString().slice(0, 10)} value={values.dateOfBirth} onChange={(event) => set("dateOfBirth")(event.target.value)} className={inputClass} /></label>
           <label className="text-sm">Time of birth<input type="time" value={values.timeOfBirth} onChange={(event) => set("timeOfBirth")(event.target.value)} className={inputClass} /></label>
           <label className="text-sm">Place of birth<input required value={values.placeOfBirth} onChange={(event) => set("placeOfBirth")(event.target.value)} className={inputClass} /></label>
-          <label className="text-sm">Current city<input required autoComplete="address-level2" value={values.currentCity} onChange={(event) => set("currentCity")(event.target.value)} className={inputClass} /></label>
         </fieldset>}
         {error && <p role="alert" className="text-sm text-gold-soft">{error}</p>}
         <button type="submit" disabled={busy} className="min-h-12 w-full rounded-sm bg-gold px-5 text-sm font-medium uppercase tracking-wider text-ink disabled:opacity-60">{busy ? "Please wait…" : mode === "sign-in" ? "Sign In with Email" : "Create Account"}</button>
