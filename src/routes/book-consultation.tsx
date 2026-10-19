@@ -466,7 +466,7 @@ function BookPage() {
                     <Field id="dateOfBirth" label="Date of birth" error={errors.dateOfBirth}>
                       <input id="f-dateOfBirth" type="date" max={today()} value={values.dateOfBirth} onChange={(e) => set("dateOfBirth")(e.target.value)} className={inputCls} />
                     </Field>
-                    <Field id="timeOfBirth" label="Time of birth" hint="Optional, but helps accuracy">
+                    <Field id="timeOfBirth" label="Time of birth">
                       <input id="f-timeOfBirth" type="time" value={values.timeOfBirth} onChange={(e) => set("timeOfBirth")(e.target.value)} className={inputCls} />
                     </Field>
                     <Field id="placeOfBirth" label="Place of birth" error={errors.placeOfBirth}>
