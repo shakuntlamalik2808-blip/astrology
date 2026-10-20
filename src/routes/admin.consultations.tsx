@@ -1,7 +1,7 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { useEffect, useMemo, useRef, useState, type FormEvent, type ReactNode } from "react";
-import { collection, deleteDoc, doc, serverTimestamp, setDoc, updateDoc } from "firebase/firestore";
-import { Plus } from "lucide-react";
+import { collection, deleteField, doc, getDoc, runTransaction, serverTimestamp, updateDoc } from "firebase/firestore";
+import { Copy, LoaderCircle, Pencil, Plus } from "lucide-react";
 import { z } from "zod";
 import { useConsultations } from "@/lib/admin-data";
 import { getFirebaseApp, getFirebaseDb } from "@/lib/firebase";
@@ -15,9 +15,10 @@ import {
   formatDate,
   formatTime,
   makeConsultationId,
+  normalizeConsultationStatus,
   type Consultation,
+  type CanonicalConsultationStatus,
   type ConsultationInput,
-  type ConsultationStatus,
   type PaymentStatus,
   bookingSlotId,
 } from "@/lib/consultations";
@@ -40,14 +41,15 @@ export const Route = createFileRoute("/admin/consultations")({
       { name: "robots", content: "noindex, nofollow" },
     ],
   }),
-  validateSearch: z.object({ status: z.string().optional() }),
+  validateSearch: z.object({ status: z.string().optional(), consultationId: z.string().optional() }),
   component: ConsultationsPage,
 });
 
 type Row = Consultation & { id: string };
 type SortKey = "createdAt" | "preferredDate" | "fullName";
+type QuickFilter = "Current" | "All" | CanonicalConsultationStatus;
 type AdminForm = ConsultationInput & {
-  status: ConsultationStatus;
+  status: CanonicalConsultationStatus;
   notes: string;
   paymentStatus: PaymentStatus;
   paidAmount: string;
@@ -109,7 +111,7 @@ function rowToForm(row: Row): AdminForm {
     preferredDate: row.preferredDate,
     preferredTime: row.preferredTime,
     additionalMessage: row.additionalMessage,
-    status: row.status,
+    status: normalizeConsultationStatus(row.status, row.archived),
     notes: row.notes ?? "",
     paymentStatus: row.paymentStatus ?? "Unpaid",
     paidAmount: row.paidAmount === undefined ? "" : String(row.paidAmount),
@@ -119,22 +121,114 @@ function rowToForm(row: Row): AdminForm {
   };
 }
 
+function displayStatus(row: Row) {
+  return normalizeConsultationStatus(row.status, row.archived);
+}
+
+function isPhonePeGatewayPayment(row: Row) {
+  return Boolean(row.phonePeTransactionId);
+}
+
+async function changeCancellation(row: Row, cancel: boolean) {
+  const db = getFirebaseDb();
+  const consultationRef = doc(db, "consultations", row.id);
+  const slotRef = doc(db, "bookedSlots", bookingSlotId(row.preferredDate, row.preferredTime));
+  await runTransaction(db, async (transaction) => {
+    const slot = await transaction.get(slotRef);
+    const slotData = slot.data();
+    const slotConsultationId = slotData?.consultationId;
+    const belongsToRow = !slotConsultationId || slotConsultationId === row.id || slotConsultationId === row.consultationId;
+    if (cancel) {
+      transaction.update(consultationRef, {
+        status: "Cancelled",
+        archived: true,
+        statusBeforeCancel: row.statusBeforeCancel || (normalizeConsultationStatus(row.status, row.archived) === "Cancelled" ? "New" : normalizeConsultationStatus(row.status, row.archived)),
+        completedAt: deleteField(),
+        updatedAt: serverTimestamp(),
+      });
+      if (slot.exists() && belongsToRow) transaction.delete(slotRef);
+      return;
+    }
+    if (slot.exists() && !belongsToRow) throw new Error("This slot has since been booked by another consultation. Choose a new slot before restoring this consultation.");
+    const restoredStatus = normalizeConsultationStatus(row.statusBeforeCancel || "New") === "Active" ? "Active" : "New";
+    transaction.update(consultationRef, {
+      status: restoredStatus,
+      archived: false,
+      statusBeforeCancel: deleteField(),
+      startedAt: restoredStatus === "Active" ? serverTimestamp() : deleteField(),
+      completedAt: deleteField(),
+      updatedAt: serverTimestamp(),
+    });
+    transaction.set(slotRef, { date: row.preferredDate, time: row.preferredTime, consultationId: row.consultationId });
+  });
+}
+
+function todayInIndia() {
+  const parts = new Intl.DateTimeFormat("en-CA", {
+    timeZone: "Asia/Kolkata", year: "numeric", month: "2-digit", day: "2-digit",
+  }).formatToParts(new Date());
+  const part = (type: string) => parts.find((item) => item.type === type)?.value ?? "";
+  return `${part("year")}-${part("month")}-${part("day")}`;
+}
+
+function normalizedServiceName(value: string) {
+  return value.toLowerCase().replace(/\b(single|consultation)\b/g, "").replace(/[^a-z0-9]+/g, " ").trim();
+}
+
+async function consultationFee(row: Row) {
+  const storedAmount = Number(row.paymentAmount);
+  if (Number.isFinite(storedAmount) && storedAmount > 0) return storedAmount;
+
+  const settings = await getDoc(doc(getFirebaseDb(), "settings", "website"));
+  const services = settings.data()?.services;
+  if (!Array.isArray(services)) throw new Error("Set this consultation's fee in Website Settings before marking it paid.");
+  const target = normalizedServiceName(row.consultationType);
+  const service = services.find((item) => normalizedServiceName(String(item.name ?? "")) === target)
+    ?? services.find((item) => {
+      const name = normalizedServiceName(String(item.name ?? ""));
+      return name && target && (name.includes(target) || target.includes(name));
+    });
+  const amount = Number(String(service?.price ?? "").replace(/,/g, "").replace(/[^\d.]/g, ""));
+  if (!Number.isFinite(amount) || amount <= 0) {
+    throw new Error("Could not find this consultation's full fee. Add a matching service price in Website Settings.");
+  }
+  return amount;
+}
+
 function ConsultationsPage() {
   const search = Route.useSearch();
   const { rows, error } = useConsultations();
+  const autoOpenedConsultationId = useRef<string | null>(null);
   const [q, setQ] = useState("");
-  const [status, setStatus] = useState(search.status ?? "All");
+  const [quickFilter, setQuickFilter] = useState<QuickFilter>(() => {
+    // The dashboard's New consultations link passes status=New; open that
+    // landing view with both current stages selected by default.
+    if (!search.status || search.status === "New") return "Current";
+    if (search.status === "All") return "All";
+    if (["New", "Active", "Done", "Cancelled", "Contacted", "Confirmed", "Completed", "Follow-up Required", "Payment Review"].includes(search.status)) {
+      return normalizeConsultationStatus(search.status);
+    }
+    return "Current";
+  });
   const [type, setType] = useState("All");
-  const [showArchived, setShowArchived] = useState(false);
   const [sort, setSort] = useState<SortKey>("createdAt");
-  const [open, setOpen] = useState<Row | null>(null);
+  const [viewing, setViewing] = useState<Row | null>(null);
+  const [editing, setEditing] = useState<Row | null>(null);
+  const [completionRow, setCompletionRow] = useState<Row | null>(null);
+  const [paymentEntry, setPaymentEntry] = useState<{ row: Row; fee: number; amount: string; markDone: boolean } | null>(null);
   const [creating, setCreating] = useState(false);
+  const [pendingAction, setPendingAction] = useState<string | null>(null);
+  const [actionNotice, setActionNotice] = useState("");
 
   const list = useMemo(() => {
     const term = q.trim().toLowerCase();
     return (rows ?? [])
-      .filter((row) => (showArchived ? row.archived : !row.archived))
-      .filter((row) => status === "All" || row.status === status)
+      .filter((row) => {
+        const status = normalizeConsultationStatus(row.status, row.archived);
+        if (quickFilter === "Current") return status === "New" || status === "Active";
+        if (quickFilter === "All") return status !== "Cancelled";
+        return status === quickFilter;
+      })
       .filter((row) => type === "All" || row.consultationType === type)
       .filter((row) => !term || [row.fullName, row.email, row.whatsappNumber, row.consultationId, row.phonePeTransactionId].some((value) => value?.toLowerCase().includes(term)))
       .sort((a, b) => {
@@ -142,7 +236,142 @@ function ConsultationsPage() {
         if (sort === "preferredDate") return (a.preferredDate + a.preferredTime).localeCompare(b.preferredDate + b.preferredTime);
         return (b.createdAt?.toMillis() ?? 0) - (a.createdAt?.toMillis() ?? 0);
       });
-  }, [rows, q, status, type, showArchived, sort]);
+  }, [rows, q, quickFilter, type, sort]);
+
+  useEffect(() => {
+    if (!search.consultationId || !rows || autoOpenedConsultationId.current === search.consultationId) return;
+    const target = rows.find((row) => row.id === search.consultationId || row.consultationId === search.consultationId);
+    if (target) {
+      autoOpenedConsultationId.current = search.consultationId;
+      setViewing(target);
+    }
+  }, [search.consultationId, rows]);
+
+  async function markStatus(row: Row, nextStatus: "Active" | "Done") {
+    if (nextStatus === "Done" && row.paymentStatus !== "Paid") {
+      setCompletionRow(row);
+      return;
+    }
+    const action = `${row.id}:${nextStatus}`;
+    setPendingAction(action);
+    setActionNotice("");
+    try {
+      await updateDoc(doc(getFirebaseDb(), "consultations", row.id), {
+        status: nextStatus,
+        archived: false,
+        statusBeforeCancel: deleteField(),
+        startedAt: row.startedAt ?? serverTimestamp(),
+        completedAt: nextStatus === "Done" ? serverTimestamp() : deleteField(),
+        updatedAt: serverTimestamp(),
+      });
+      setActionNotice(nextStatus === "Done" ? "Consultation marked as Done." : "Consultation moved to Active.");
+    } catch (cause) {
+      setActionNotice((cause as Error).message || "Could not update consultation status.");
+    } finally {
+      setPendingAction(null);
+    }
+  }
+
+  async function openPaymentEntry(row: Row, markDone: boolean) {
+    setPendingAction(`${row.id}:fee`);
+    setActionNotice("");
+    let expectedFee: number;
+    try {
+      expectedFee = await consultationFee(row);
+    } catch (cause) {
+      setActionNotice((cause as Error).message || "Could not determine the consultation fee.");
+      return;
+    } finally {
+      setPendingAction(null);
+    }
+    const defaultAmount = (row.paidAmount ?? 0) > 0 ? row.paidAmount ?? 0 : expectedFee;
+    setCompletionRow(null);
+    setPaymentEntry({ row, fee: expectedFee, amount: String(defaultAmount), markDone });
+  }
+
+  async function savePaymentEntry() {
+    if (!paymentEntry) return;
+    const { row, fee, markDone } = paymentEntry;
+    const amountReceived = Number(paymentEntry.amount.trim());
+    if (!Number.isFinite(amountReceived) || amountReceived <= 0) {
+      setActionNotice("Enter a valid amount greater than ₹0.");
+      return;
+    }
+    setPendingAction(`${row.id}:${markDone ? "Done" : "paid"}`);
+    setActionNotice("");
+    try {
+      await updateDoc(doc(getFirebaseDb(), "consultations", row.id), {
+        ...(markDone ? {
+          status: "Done",
+          archived: false,
+          statusBeforeCancel: deleteField(),
+          startedAt: row.startedAt ?? serverTimestamp(),
+          completedAt: serverTimestamp(),
+        } : {}),
+        paymentStatus: "Paid",
+        paymentAmount: fee,
+        paidAmount: amountReceived,
+        paidAt: serverTimestamp(),
+        paymentDate: todayInIndia(),
+        updatedAt: serverTimestamp(),
+      });
+      setActionNotice(markDone ? "Payment recorded and consultation marked as Done." : "Payment recorded.");
+      setPaymentEntry(null);
+    } catch (cause) {
+      setActionNotice((cause as Error).message || "Could not mark the consultation as paid and done.");
+    } finally {
+      setPendingAction(null);
+    }
+  }
+
+  async function completeAndMarkPaid(row: Row) {
+    await openPaymentEntry(row, true);
+  }
+
+  async function setCancelled(row: Row, cancel: boolean) {
+    const action = `${row.id}:${cancel ? "cancel" : "restore"}`;
+    setPendingAction(action);
+    setActionNotice("");
+    try {
+      await changeCancellation(row, cancel);
+      setActionNotice(cancel ? "Consultation cancelled and its reserved slot released." : "Consultation restored.");
+    } catch (cause) {
+      setActionNotice((cause as Error).message || "Could not update consultation cancellation.");
+    } finally {
+      setPendingAction(null);
+    }
+  }
+
+  async function markPayment(row: Row, paid: boolean) {
+    if (paid && normalizeConsultationStatus(row.status, row.archived) === "Cancelled") {
+      setActionNotice("Restore this consultation before recording a payment.");
+      return;
+    }
+    if (paid) {
+      await openPaymentEntry(row, false);
+      return;
+    }
+    if (!paid && isPhonePeGatewayPayment(row)) {
+      setActionNotice("PhonePe gateway payments cannot be marked unpaid.");
+      return;
+    }
+    if (!paid && !confirm(`Mark ${row.consultationId} as Unpaid? This clears the recorded amount and payment date.`)) return;
+    const action = `${row.id}:${paid ? "paid" : "unpaid"}`;
+    setPendingAction(action);
+    setActionNotice("");
+    try {
+      const paymentFields = { paymentStatus: "Unpaid", paidAmount: 0, paidAt: deleteField(), paymentDate: "" };
+      await updateDoc(doc(getFirebaseDb(), "consultations", row.id), {
+        ...paymentFields,
+        updatedAt: serverTimestamp(),
+      });
+      setActionNotice("Payment status reset to Unpaid.");
+    } catch (cause) {
+      setActionNotice((cause as Error).message || "Could not update payment status.");
+    } finally {
+      setPendingAction(null);
+    }
+  }
 
   const control = "h-10 min-w-0 rounded-sm border border-input bg-card px-3 text-sm";
 
@@ -159,38 +388,56 @@ function ConsultationsPage() {
       </div>
 
       {error && <p className="mt-4 text-sm text-destructive">{error}</p>}
-      <div className="mt-6 grid gap-3 sm:grid-cols-2 xl:grid-cols-[minmax(14rem,1fr)_auto_auto_auto_auto]">
+      {actionNotice && <p role="status" aria-live="polite" className="mt-4 rounded-sm border border-primary/30 bg-primary/5 px-4 py-3 text-sm">{actionNotice}</p>}
+      <div className="mt-5 flex flex-wrap gap-2" role="tablist" aria-label="Quick consultation filters">
+        {([{ value: "Current", label: "New & Active" }, { value: "All", label: "All" }, ...STATUSES.map((status) => ({ value: status, label: status }))] as const).map(({ value, label }) => {
+          const count = (rows ?? []).filter((row) => {
+            const current = normalizeConsultationStatus(row.status, row.archived);
+            if (value === "Current") return current === "New" || current === "Active";
+            return value === "All" ? current !== "Cancelled" : current === value;
+          }).length;
+          return <button key={value} type="button" role="tab" aria-selected={quickFilter === value} onClick={() => setQuickFilter(value)} className={`min-h-10 rounded-sm border px-4 text-sm transition-colors ${quickFilter === value ? "border-gold bg-gold/15 text-foreground" : "border-border bg-card text-muted-foreground hover:bg-muted"}`}>{label}<span className="ml-2 text-xs opacity-70">{rows ? count : "…"}</span></button>;
+        })}
+      </div>
+      <div className="mt-6 grid gap-3 sm:grid-cols-2 xl:grid-cols-[minmax(14rem,1fr)_auto_auto_auto]">
         <input placeholder="Search name, email, phone, ID…" value={q} onChange={(event) => setQ(event.target.value)} className={`${control} sm:col-span-2 xl:col-span-1`} />
-        <select value={status} onChange={(event) => setStatus(event.target.value)} className={control} aria-label="Status filter">
-          <option>All</option>{STATUSES.map((item) => <option key={item}>{item}</option>)}
-        </select>
         <select value={type} onChange={(event) => setType(event.target.value)} className={control} aria-label="Type filter">
           <option>All</option>{CONSULTATION_TYPES.map((item) => <option key={item}>{item}</option>)}
         </select>
         <select value={sort} onChange={(event) => setSort(event.target.value as SortKey)} className={control} aria-label="Sort">
           <option value="createdAt">Newest first</option><option value="preferredDate">Preferred date</option><option value="fullName">Name A–Z</option>
         </select>
-        <label className="flex min-h-10 items-center gap-2 text-sm"><input type="checkbox" checked={showArchived} onChange={(event) => setShowArchived(event.target.checked)} /> Archived</label>
       </div>
 
       <div className="mt-6 overflow-x-auto rounded-sm border border-border bg-card">
-        <table className="w-full min-w-[820px] text-sm">
+        <table className="w-full min-w-[1120px] text-sm">
           <thead className="border-b border-border text-left text-xs uppercase tracking-[0.12em] text-muted-foreground">
-            <tr>{["Customer", "Consultation", "Preferred Date", "Preferred Time", "Status", "Payment"].map((heading) => <th key={heading} className="px-5 py-3 font-medium">{heading}</th>)}</tr>
+            <tr>{["Customer", "Consultation", "Preferred Date & Time", "Status", "Payment", "Quick actions"].map((heading) => <th key={heading} className="px-4 py-3 font-medium">{heading}</th>)}</tr>
           </thead>
           <tbody className="divide-y divide-border">
             {list.map((row) => (
-              <tr key={row.id} onClick={() => setOpen(row)} className="cursor-pointer transition-colors hover:bg-muted/50">
-                <td className="px-5 py-3"><p className="font-medium">{row.fullName}</p><p className="text-xs text-muted-foreground">{row.whatsappNumber}</p></td>
-                <td className="px-5 py-3">{row.consultationType.replace(" Consultation", "")}</td>
-                <td className="px-5 py-3">{formatDate(row.preferredDate)}</td>
-                <td className="px-5 py-3">{formatTime(row.preferredTime)}</td>
-                <td className="px-5 py-3"><StatusBadge status={row.status} /></td>
-                <td className="px-5 py-3"><span className={`rounded-full border px-2.5 py-1 text-xs ${row.paymentStatus === "Paid" ? "border-emerald-500/30 bg-emerald-500/10 text-emerald-700" : row.paymentStatus === "Partially paid" ? "border-amber-500/30 bg-amber-500/10 text-amber-700" : "border-border bg-muted text-muted-foreground"}`}>{row.paymentStatus ?? "Unpaid"}</span>{(row.paidAmount ?? 0) > 0 && <span className="ml-2 text-xs text-muted-foreground">₹{row.paidAmount}</span>}{row.phonePeTransactionId && <p className="mt-1 max-w-44 truncate text-xs text-muted-foreground" title={row.phonePeTransactionId}>PhonePe: {row.phonePeTransactionId}</p>}</td>
+              <tr key={row.id} tabIndex={0} onClick={() => setViewing(row)} onKeyDown={(event) => { if (event.target === event.currentTarget && (event.key === "Enter" || event.key === " ")) { event.preventDefault(); setViewing(row); } }} className="cursor-pointer transition-colors hover:bg-muted/50 focus-visible:outline focus-visible:outline-2 focus-visible:outline-gold" title="Open consultation details">
+                <td className="px-4 py-3"><p className="font-medium">{row.fullName}</p><p className="text-xs text-muted-foreground">{row.whatsappNumber}</p></td>
+                <td className="px-4 py-3">{row.consultationType.replace(" Consultation", "")}</td>
+                <td className="px-4 py-3"><span className="whitespace-nowrap">{formatDate(row.preferredDate)}</span><span className="ml-2 whitespace-nowrap text-muted-foreground">{formatTime(row.preferredTime)}</span></td>
+                <td className="px-4 py-3"><StatusBadge status={displayStatus(row)} />{row.paymentReviewRequired && <p className="mt-1 text-xs font-medium text-amber-700">Payment review required</p>}</td>
+                <td className="px-4 py-3"><PaymentBadge status={row.paymentStatus ?? "Unpaid"} amount={row.paidAmount ?? 0} />{row.paymentAmount ? <span className="mt-1 block text-xs text-muted-foreground">Fee: INR {row.paymentAmount}</span> : <span className="mt-1 block text-xs text-muted-foreground">Fee not set</span>}{row.phonePeTransactionId && <p className="mt-1 max-w-44 truncate text-xs text-muted-foreground" title={row.phonePeTransactionId}>PhonePe: {row.phonePeTransactionId}</p>}</td>
+                <td className="px-4 py-3" onClick={(event) => event.stopPropagation()}>
+                  <div className="flex flex-wrap gap-2">
+                    <Button type="button" variant="outline" className="h-10" onClick={() => setViewing(row)}>View</Button>
+                    {normalizeConsultationStatus(row.status, row.archived) === "New" && <Button type="button" className="h-10" disabled={pendingAction !== null} onClick={() => void markStatus(row, "Active")}>{pendingAction === `${row.id}:Active` ? <LoaderCircle className="animate-spin" /> : "Move to Active"}</Button>}
+                    {normalizeConsultationStatus(row.status, row.archived) === "Active" && <Button type="button" className="h-10" disabled={pendingAction !== null} onClick={() => void markStatus(row, "Done")}>{pendingAction === `${row.id}:Done` ? <LoaderCircle className="animate-spin" /> : "Mark Done"}</Button>}
+                    {normalizeConsultationStatus(row.status, row.archived) === "Done" && <span className="inline-flex h-10 items-center rounded-sm border border-border px-3 text-sm">Done ✓</span>}
+                    {normalizeConsultationStatus(row.status, row.archived) === "Cancelled"
+                      ? <Button type="button" variant="outline" className="h-10" disabled={pendingAction !== null} onClick={() => void setCancelled(row, false)}>{pendingAction === `${row.id}:restore` ? <LoaderCircle className="animate-spin" /> : "Restore to New/Active"}</Button>
+                      : normalizeConsultationStatus(row.status, row.archived) === "New" && <Button type="button" variant="outline" className="h-10" disabled={pendingAction !== null} onClick={() => { if (confirm(`Cancel consultation ${row.consultationId} and release its reserved slot?`)) void setCancelled(row, true); }}>Cancel Consultation</Button>}
+                    {row.paymentStatus === "Paid" ? (isPhonePeGatewayPayment(row) || normalizeConsultationStatus(row.status, row.archived) === "Cancelled" ? null : <Button type="button" variant="outline" className="h-10" disabled={pendingAction !== null} onClick={() => void markPayment(row, false)}>{pendingAction === `${row.id}:unpaid` ? <LoaderCircle className="animate-spin" /> : "Mark Unpaid"}</Button>) : normalizeConsultationStatus(row.status, row.archived) !== "Cancelled" && <Button type="button" variant="outline" className="h-10" disabled={pendingAction !== null} onClick={() => void markPayment(row, true)}>{pendingAction === `${row.id}:paid` || pendingAction === `${row.id}:fee` ? <LoaderCircle className="animate-spin" /> : "Mark Paid"}</Button>}
+                  </div>
+                </td>
               </tr>
             ))}
-            {rows && list.length === 0 && <tr><td colSpan={6} className="px-5 py-10 text-center text-muted-foreground">No matching consultations.</td></tr>}
-            {!rows && !error && <tr><td colSpan={6} className="px-5 py-10 text-center text-muted-foreground">Loading…</td></tr>}
+            {rows && list.length === 0 && <tr><td colSpan={7} className="px-5 py-10 text-center text-muted-foreground">No matching consultations.</td></tr>}
+            {!rows && !error && <tr><td colSpan={7} className="px-5 py-10 text-center text-muted-foreground">Loading…</td></tr>}
           </tbody>
         </table>
       </div>
@@ -200,13 +447,147 @@ function ConsultationsPage() {
           <ConsultationForm mode="create" initial={emptyForm} onClose={() => setCreating(false)} />
         </DialogContent>
       </Dialog>
-      <Dialog open={Boolean(open)} onOpenChange={(value) => !value && setOpen(null)}>
+      <Dialog open={Boolean(editing)} onOpenChange={(value) => !value && setEditing(null)}>
         <DialogContent className="max-h-[calc(100dvh-1rem)] w-[calc(100%-1rem)] overflow-y-auto p-4 sm:max-h-[90vh] sm:max-w-3xl sm:p-6">
-          {open && <ConsultationForm mode="edit" initial={rowToForm(open)} row={open} onClose={() => setOpen(null)} />}
+          {editing && <ConsultationForm key={editing.id} mode="edit" initial={rowToForm(editing)} row={editing} onClose={() => setEditing(null)} />}
+        </DialogContent>
+      </Dialog>
+      <Dialog open={Boolean(viewing)} onOpenChange={(value) => !value && setViewing(null)}>
+        <DialogContent className="max-h-[calc(100dvh-1rem)] w-[calc(100%-1rem)] overflow-y-auto p-4 sm:max-h-[90vh] sm:max-w-4xl sm:p-6">
+          {viewing && <ConsultationView
+            key={viewing.id}
+            row={rows?.find((row) => row.id === viewing.id) ?? viewing}
+            pendingAction={pendingAction}
+            notice={actionNotice}
+            onClose={() => setViewing(null)}
+            onEdit={() => { setEditing(rows?.find((row) => row.id === viewing.id) ?? viewing); setViewing(null); }}
+            onMarkStatus={(nextStatus) => void markStatus(rows?.find((row) => row.id === viewing.id) ?? viewing, nextStatus)}
+            onMarkPayment={(paid) => void markPayment(rows?.find((row) => row.id === viewing.id) ?? viewing, paid)}
+            onSetCancelled={(cancel) => { const row = rows?.find((item) => item.id === viewing.id) ?? viewing; if (cancel && !confirm(`Cancel consultation ${row.consultationId} and release its reserved slot?`)) return; void setCancelled(row, cancel); }}
+          />}
+        </DialogContent>
+      </Dialog>
+      <Dialog open={Boolean(completionRow)} onOpenChange={(open) => !open && setCompletionRow(null)}>
+        <DialogContent className="max-w-md">
+          <DialogHeader><DialogTitle className="font-display">Record payment to finish</DialogTitle><p className="text-sm text-muted-foreground">{completionRow?.consultationId} can be marked Done after its payment is recorded.</p></DialogHeader>
+          <div className="mt-4 grid gap-3">
+            {completionRow && <Button type="button" className="min-h-11" disabled={pendingAction !== null} onClick={() => void completeAndMarkPaid(completionRow)}>{pendingAction === `${completionRow.id}:Done` || pendingAction === `${completionRow.id}:fee` ? <LoaderCircle className="animate-spin" /> : "Mark Paid & Done"}</Button>}
+            <Button type="button" variant="ghost" className="min-h-11" onClick={() => setCompletionRow(null)}>Cancel</Button>
+          </div>
+        </DialogContent>
+      </Dialog>
+      <Dialog open={Boolean(paymentEntry)} onOpenChange={(open) => !open && pendingAction === null && setPaymentEntry(null)}>
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle className="font-display">Record payment received</DialogTitle>
+            <p className="text-sm text-muted-foreground">{paymentEntry?.row.consultationId} · Consultation fee ₹{Number(paymentEntry?.fee ?? 0).toLocaleString("en-IN")}</p>
+          </DialogHeader>
+          <label className="mt-4 grid gap-2 text-sm">Amount received (₹)
+            <input autoFocus type="number" min="0.01" step="0.01" inputMode="decimal" value={paymentEntry?.amount ?? ""} onChange={(event) => setPaymentEntry((current) => current ? { ...current, amount: event.target.value } : current)} className={control} />
+          </label>
+          <div className="mt-4 flex flex-wrap justify-end gap-2">
+            <Button type="button" variant="outline" className="min-h-10" disabled={pendingAction !== null} onClick={() => setPaymentEntry(null)}>Cancel</Button>
+            <Button type="button" className="min-h-10" disabled={pendingAction !== null} onClick={() => void savePaymentEntry()}>{pendingAction ? <LoaderCircle className="animate-spin" /> : paymentEntry?.markDone ? "Mark Paid & Done" : "Save Payment"}</Button>
+          </div>
         </DialogContent>
       </Dialog>
     </div>
   );
+}
+
+function ConsultationView({
+  row, pendingAction, notice, onClose, onEdit, onMarkStatus, onMarkPayment, onSetCancelled,
+}: {
+  row: Row;
+  pendingAction: string | null;
+  notice: string;
+  onClose: () => void;
+  onEdit: () => void;
+  onMarkStatus: (status: "Active" | "Done") => void;
+  onMarkPayment: (paid: boolean) => void;
+  onSetCancelled: (cancel: boolean) => void;
+}) {
+  const phone = row.whatsappNumber || "";
+  const phoneDigits = phone.replace(/\D/g, "");
+  const [copyNotice, setCopyNotice] = useState("");
+
+  async function copy(label: string, value: string) {
+    try {
+      await navigator.clipboard.writeText(value);
+      setCopyNotice(`${label} copied.`);
+    } catch {
+      setCopyNotice("Clipboard access is unavailable in this browser.");
+    }
+  }
+
+  return <div className="space-y-6">
+    <DialogHeader className="pr-8">
+      <div className="flex flex-wrap items-start justify-between gap-4">
+        <div>
+          <DialogTitle className="font-display text-xl">View Consultation</DialogTitle>
+          <p className="mt-2 text-xs text-muted-foreground">{row.consultationId} · {row.source}</p>
+        </div>
+        <div className="flex flex-wrap gap-2">
+          <Button type="button" variant="outline" className="min-h-10" onClick={onEdit}><Pencil className="mr-2 size-4" />Edit Details</Button>
+          {normalizeConsultationStatus(row.status, row.archived) === "New" && <Button type="button" className="min-h-10" disabled={pendingAction !== null} onClick={() => onMarkStatus("Active")}>{pendingAction === `${row.id}:Active` ? <LoaderCircle className="animate-spin" /> : "Move to Active"}</Button>}
+          {normalizeConsultationStatus(row.status, row.archived) === "Active" && <Button type="button" className="min-h-10" disabled={pendingAction !== null} onClick={() => onMarkStatus("Done")}>{pendingAction === `${row.id}:Done` ? <LoaderCircle className="animate-spin" /> : "Mark Done"}</Button>}
+          {normalizeConsultationStatus(row.status, row.archived) === "Done" && <><span className="inline-flex min-h-10 items-center rounded-sm border border-border px-3 text-sm">Done ✓</span><Button type="button" variant="outline" className="min-h-10" disabled={pendingAction !== null} onClick={() => onMarkStatus("Active")}>Reopen to Active</Button></>}
+          {normalizeConsultationStatus(row.status, row.archived) === "Cancelled"
+            ? <Button type="button" variant="outline" className="min-h-10" disabled={pendingAction !== null} onClick={() => onSetCancelled(false)}>{pendingAction === `${row.id}:restore` ? <LoaderCircle className="animate-spin" /> : "Restore to New/Active"}</Button>
+            : normalizeConsultationStatus(row.status, row.archived) === "New" && <Button type="button" variant="outline" className="min-h-10" disabled={pendingAction !== null} onClick={() => onSetCancelled(true)}>Cancel Consultation</Button>}
+        </div>
+      </div>
+    </DialogHeader>
+
+    {(notice || copyNotice) && <p role="status" aria-live="polite" className="rounded-sm border border-primary/30 bg-primary/5 px-4 py-3 text-sm">{copyNotice || notice}</p>}
+    <div className="flex flex-wrap items-center gap-3">
+      <StatusBadge status={displayStatus(row)} />
+      <PaymentBadge status={row.paymentStatus ?? "Unpaid"} amount={row.paidAmount ?? 0} />
+      {row.paymentStatus === "Paid"
+        ? (isPhonePeGatewayPayment(row) || normalizeConsultationStatus(row.status, row.archived) === "Cancelled" ? null : <Button type="button" variant="outline" className="min-h-10" disabled={pendingAction !== null} onClick={() => onMarkPayment(false)}>{pendingAction === `${row.id}:unpaid` ? <LoaderCircle className="animate-spin" /> : "Mark Unpaid"}</Button>)
+        : normalizeConsultationStatus(row.status, row.archived) !== "Cancelled" && <Button type="button" variant="outline" className="min-h-10" disabled={pendingAction !== null} onClick={() => onMarkPayment(true)}>{pendingAction === `${row.id}:paid` || pendingAction === `${row.id}:fee` ? <LoaderCircle className="animate-spin" /> : "Mark Paid"}</Button>}
+      <span className="text-sm text-muted-foreground">Received {`₹${Number(row.paidAmount ?? 0).toLocaleString("en-IN")}`} {row.paymentAmount ? `of ₹${Number(row.paymentAmount).toLocaleString("en-IN")}` : ""}</span>
+    </div>
+
+    <section className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3" aria-label="Consultation details">
+      <ReadOnlyCard label="Client name" value={row.fullName} />
+      <ReadOnlyCard label="Member / relationship" value={`${row.memberName || row.fullName} · ${row.relationship || "Self"}`} />
+      <div className="rounded-sm border border-border bg-card p-4"><p className="text-xs uppercase tracking-wide text-muted-foreground">Phone</p><a className="mt-2 block break-all font-medium underline underline-offset-4" href={`tel:${phone}`}>{phone || "Not provided"}</a><div className="mt-3 flex flex-wrap gap-2"><a className="inline-flex min-h-9 items-center rounded-sm border border-border px-3 text-xs" href={`tel:${phone}`}>Call</a>{phoneDigits && <a className="inline-flex min-h-9 items-center rounded-sm border border-border px-3 text-xs" href={`https://wa.me/${phoneDigits}`} target="_blank" rel="noreferrer">WhatsApp</a>}</div></div>
+      <ReadOnlyCard label="Email" value={row.email || "Not provided"} href={row.email ? `mailto:${row.email}` : undefined} />
+      <ReadOnlyCard label="Consultation type" value={row.consultationType} />
+      <ReadOnlyCard label="Appointment" value={`${formatDate(row.preferredDate)} · ${formatTime(row.preferredTime)}`} />
+      <ReadOnlyCard label="Validity" value={formatDate(row.validUntil)} />
+      <ReadOnlyCard label="Payment method / reference" value={[row.paymentMethod, row.paymentReference].filter(Boolean).join(" · ") || "Not recorded"} />
+      {row.paymentReviewRequired && <ReadOnlyCard label="Payment review" value="Payment verified, but the booked slot conflicted. Contact the customer to reschedule or refund." />}
+    </section>
+
+    <section className="rounded-sm border border-gold/50 bg-gold/5 p-4 sm:p-5" aria-label="Birth details">
+      <h3 className="font-display text-lg">Birth details</h3>
+      <div className="mt-4 grid gap-3 sm:grid-cols-3">
+        <CopyField label="Date of birth" value={formatDate(row.dateOfBirth)} onCopy={() => void copy("Date of birth", row.dateOfBirth)} />
+        <CopyField label="Time of birth" value={row.timeOfBirth || "Not provided"} onCopy={() => void copy("Time of birth", row.timeOfBirth || "")} />
+        <CopyField label="Place of birth" value={row.placeOfBirth || "Not provided"} onCopy={() => void copy("Place of birth", row.placeOfBirth || "")} />
+      </div>
+    </section>
+
+    {row.additionalMessage && <ReadOnlyCard label="Client message" value={row.additionalMessage} />}
+    {row.phonePeTransactionId && <ReadOnlyCard label="PhonePe transaction ID" value={row.phonePeTransactionId} />}
+    <RemediesEditor row={row} />
+    <div className="flex justify-end border-t border-border pt-4"><Button type="button" variant="outline" className="min-h-10" onClick={onClose}>Close</Button></div>
+  </div>;
+}
+
+function ReadOnlyCard({ label, value, href }: { label: string; value: string; href?: string }) {
+  return <div className="min-w-0 rounded-sm border border-border bg-card p-4"><p className="text-xs uppercase tracking-wide text-muted-foreground">{label}</p>{href ? <a href={href} className="mt-2 block break-words font-medium underline underline-offset-4">{value}</a> : <p className="mt-2 break-words font-medium">{value || "—"}</p>}</div>;
+}
+
+function CopyField({ label, value, onCopy }: { label: string; value: string; onCopy: () => void }) {
+  return <div className="min-w-0 rounded-sm border border-gold/30 bg-background p-3"><p className="text-xs text-muted-foreground">{label}</p><div className="mt-2 flex items-center justify-between gap-2"><p className="break-words text-sm font-medium">{value || "—"}</p><Button type="button" variant="outline" className="h-9 shrink-0 px-2" aria-label={`Copy ${label}`} onClick={onCopy}><Copy className="mr-1 size-3.5" />Copy</Button></div></div>;
+}
+
+function PaymentBadge({ status, amount }: { status: PaymentStatus; amount: number }) {
+  const style = status === "Paid" ? "border-emerald-500/30 bg-emerald-500/10 text-emerald-700" : status === "Partially paid" ? "border-rose-500/40 bg-rose-500/10 text-rose-800" : "border-amber-500/40 bg-amber-500/10 text-amber-800";
+  return <span className={`inline-flex items-center gap-1 rounded-full border px-2.5 py-1 text-xs font-medium ${style}`}><span>{status}</span>{amount > 0 && <span>· ₹{amount.toLocaleString("en-IN")}</span>}</span>;
 }
 
 function ConsultationForm({ mode, initial, row, onClose }: { mode: "create" | "edit"; initial: AdminForm; row?: Row; onClose: () => void }) {
@@ -258,36 +639,60 @@ function ConsultationForm({ mode, initial, row, onClose }: { mode: "create" | "e
       paymentMethod: data.paymentMethod,
       paymentReference: data.paymentReference.trim(),
       paymentDate: data.paymentDate,
+      archived: data.status === "Cancelled",
       updatedAt: serverTimestamp(),
     };
 
     try {
       if (mode === "create") {
+        if (data.status === "Done" && data.paymentStatus !== "Paid") throw new Error("Mark payment as Paid before creating a consultation as Done.");
         const id = makeConsultationId();
-        await setDoc(doc(collection(getFirebaseDb(), "consultations"), id), {
-          ...payload,
-          consultationId: id,
-          source: "admin",
-          archived: false,
-          createdAt: serverTimestamp(),
-        });
-        if (data.status !== "Cancelled") {
-          await setDoc(doc(getFirebaseDb(), "bookedSlots", bookingSlotId(data.preferredDate, data.preferredTime)), {
-            date: data.preferredDate, time: data.preferredTime, consultationId: id,
+        const db = getFirebaseDb();
+        const consultationRef = doc(collection(db, "consultations"), id);
+        const slotRef = doc(db, "bookedSlots", bookingSlotId(data.preferredDate, data.preferredTime));
+        await runTransaction(db, async (transaction) => {
+          const slot = data.status === "Cancelled" ? null : await transaction.get(slotRef);
+          if (slot?.exists()) throw new Error("This time is already reserved. Choose a different slot.");
+          transaction.set(consultationRef, {
+            ...payload,
+            ...(data.status === "Cancelled" ? { statusBeforeCancel: "New" } : {}),
+            ...(data.status === "Active" || data.status === "Done" ? { startedAt: serverTimestamp() } : {}),
+            ...(data.status === "Done" ? { completedAt: serverTimestamp() } : {}),
+            consultationId: id,
+            source: "admin",
+            createdAt: serverTimestamp(),
           });
-        }
+          if (data.status !== "Cancelled") transaction.set(slotRef, { date: data.preferredDate, time: data.preferredTime, consultationId: id });
+        });
       } else if (row) {
-        await updateDoc(doc(getFirebaseDb(), "consultations", row.id), payload);
+        const db = getFirebaseDb();
         const oldSlotId = bookingSlotId(row.preferredDate, row.preferredTime);
         const newSlotId = bookingSlotId(data.preferredDate, data.preferredTime);
-        if (oldSlotId !== newSlotId || data.status === "Cancelled") {
-          await deleteDoc(doc(getFirebaseDb(), "bookedSlots", oldSlotId));
-        }
-        if (data.status !== "Cancelled") {
-          await setDoc(doc(getFirebaseDb(), "bookedSlots", newSlotId), {
-            date: data.preferredDate, time: data.preferredTime, consultationId: row.consultationId,
+        const oldSlotRef = doc(db, "bookedSlots", oldSlotId);
+        const newSlotRef = doc(db, "bookedSlots", newSlotId);
+        const wasCancelled = normalizeConsultationStatus(row.status, row.archived) === "Cancelled";
+        const nextStatusBeforeCancel = data.status === "Cancelled"
+          ? (row.statusBeforeCancel || (wasCancelled ? "New" : normalizeConsultationStatus(row.status, row.archived)))
+          : deleteField();
+        if (data.status === "Done" && data.paymentStatus !== "Paid") throw new Error("Use the Mark Done action and choose whether to record payment or keep it unpaid.");
+        await runTransaction(db, async (transaction) => {
+          const oldSlot = await transaction.get(oldSlotRef);
+          const newSlot = newSlotId === oldSlotId ? oldSlot : (data.status === "Cancelled" ? null : await transaction.get(newSlotRef));
+          const newSlotOwner = newSlot?.data()?.consultationId;
+          if (data.status !== "Cancelled" && newSlot?.exists() && newSlotOwner && newSlotOwner !== row.id && newSlotOwner !== row.consultationId) {
+            throw new Error("This time is already reserved. Choose a different slot.");
+          }
+          transaction.update(doc(db, "consultations", row.id), {
+            ...payload,
+            statusBeforeCancel: nextStatusBeforeCancel,
+            startedAt: data.status === "Active" ? row.startedAt ?? serverTimestamp() : deleteField(),
+            completedAt: data.status === "Done" ? row.completedAt ?? serverTimestamp() : deleteField(),
           });
-        }
+          const oldSlotOwner = oldSlot.data()?.consultationId;
+          const oldSlotBelongsHere = !oldSlotOwner || oldSlotOwner === row.id || oldSlotOwner === row.consultationId;
+          if ((oldSlotId !== newSlotId || data.status === "Cancelled") && oldSlot.exists() && oldSlotBelongsHere) transaction.delete(oldSlotRef);
+          if (data.status !== "Cancelled") transaction.set(newSlotRef, { date: data.preferredDate, time: data.preferredTime, consultationId: row.consultationId });
+        });
       }
       onClose();
     } catch (cause) {
@@ -302,8 +707,15 @@ function ConsultationForm({ mode, initial, row, onClose }: { mode: "create" | "e
     setBusy(true);
     setError(null);
     try {
-      await deleteDoc(doc(getFirebaseDb(), "consultations", row.id));
-      await deleteDoc(doc(getFirebaseDb(), "bookedSlots", bookingSlotId(row.preferredDate, row.preferredTime)));
+      const db = getFirebaseDb();
+      const consultationRef = doc(db, "consultations", row.id);
+      const slotRef = doc(db, "bookedSlots", bookingSlotId(row.preferredDate, row.preferredTime));
+      await runTransaction(db, async (transaction) => {
+        const slot = await transaction.get(slotRef);
+        const slotOwner = slot.data()?.consultationId;
+        transaction.delete(consultationRef);
+        if (slot.exists() && (!slotOwner || slotOwner === row.id || slotOwner === row.consultationId)) transaction.delete(slotRef);
+      });
       onClose();
     } catch (cause) {
       setError((cause as Error).message || "Could not delete this consultation.");
@@ -311,12 +723,14 @@ function ConsultationForm({ mode, initial, row, onClose }: { mode: "create" | "e
     }
   }
 
-  async function toggleArchive() {
+  async function toggleCancellation() {
     if (!row) return;
+    const cancelling = normalizeConsultationStatus(row.status, row.archived) !== "Cancelled";
+    if (cancelling && !confirm(`Cancel consultation ${row.consultationId} and release its reserved slot?`)) return;
     setBusy(true);
     setError(null);
     try {
-      await updateDoc(doc(getFirebaseDb(), "consultations", row.id), { archived: !row.archived, updatedAt: serverTimestamp() });
+      await changeCancellation(row, cancelling);
       onClose();
     } catch (cause) {
       setError((cause as Error).message || "Could not update this consultation.");
@@ -364,14 +778,13 @@ function ConsultationForm({ mode, initial, row, onClose }: { mode: "create" | "e
           <FormField label="Payment reference" error={errors.paymentReference} full><input placeholder="Optional transaction ID or receipt number" value={form.paymentReference} onChange={(event) => set("paymentReference")(event.target.value)} className={inputClass} /></FormField>
           {row?.phonePeTransactionId && <FormField label="PhonePe transaction ID" full><input value={row.phonePeTransactionId} readOnly className={`${inputClass} opacity-75`} /></FormField>}
         </FormSection>
-        {mode === "edit" && row && <RemediesEditor row={row} />}
       </div>
 
       {error && <p role="alert" className="mt-5 text-sm text-destructive">{error}</p>}
       <div className="mt-6 flex flex-col-reverse gap-3 border-t border-border pt-5 sm:flex-row sm:justify-between">
         {mode === "edit" ? (
           <div className="grid grid-cols-2 gap-2">
-            <Button type="button" variant="outline" disabled={busy} onClick={toggleArchive}>{row?.archived ? "Unarchive" : "Archive"}</Button>
+            {row && normalizeConsultationStatus(row.status, row.archived) !== "Cancelled" && normalizeConsultationStatus(row.status, row.archived) !== "New" ? <span /> : <Button type="button" variant="outline" disabled={busy} onClick={toggleCancellation}>{row && normalizeConsultationStatus(row.status, row.archived) === "Cancelled" ? "Restore Consultation" : "Cancel Consultation"}</Button>}
             <Button type="button" variant="outline" disabled={busy} onClick={remove} className="border-destructive/50 text-destructive hover:bg-destructive/10 hover:text-destructive">Delete</Button>
           </div>
         ) : <span />}

@@ -44,16 +44,29 @@ export const CONSULTATION_TYPES = [
   "General Consultation",
 ] as const;
 
-export const STATUSES = [
-  "New",
-  "Contacted",
-  "Confirmed",
-  "Completed",
-  "Cancelled",
-  "Follow-up Required",
-  "Payment Review",
-] as const;
-export type ConsultationStatus = (typeof STATUSES)[number];
+export const STATUSES = ["New", "Active", "Done", "Cancelled"] as const;
+export type CanonicalConsultationStatus = (typeof STATUSES)[number];
+export type ConsultationStatus = CanonicalConsultationStatus
+  | "Contacted" | "Confirmed" | "Completed" | "Follow-up Required" | "Payment Review";
+
+/** Maps persisted legacy values to the current four-state workflow. */
+export function normalizeConsultationStatus(status?: string, archived = false): CanonicalConsultationStatus {
+  if (archived || status === "Cancelled") return "Cancelled";
+  if (status === "Completed" || status === "Done") return "Done";
+  if (status === "New") return "New";
+  if (status === "Active" || status === "Contacted" || status === "Confirmed" || status === "Follow-up Required" || status === "Payment Review") return "Active";
+  return "New";
+}
+
+export function customerConsultationStatusLabel(status?: string, archived = false) {
+  const normalized = normalizeConsultationStatus(status, archived);
+  return {
+    New: "Booking Received",
+    Active: "Kundli Analysis in Progress",
+    Done: "Consultation Completed",
+    Cancelled: "Cancelled",
+  }[normalized];
+}
 
 export const PAYMENT_STATUSES = ["Unpaid", "Partially paid", "Paid"] as const;
 export type PaymentStatus = (typeof PAYMENT_STATUSES)[number];
@@ -111,6 +124,10 @@ export type Consultation = {
   phonePeMerchantOrderId?: string;
   phonePeTransactionId?: string;
   paidAt?: Timestamp;
+  completedAt?: Timestamp;
+  startedAt?: Timestamp;
+  statusBeforeCancel?: string;
+  paymentReviewRequired?: boolean;
   notes?: string;
   archived?: boolean;
   customerId?: string;

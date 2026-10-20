@@ -1,10 +1,10 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { useEffect, useMemo, useState } from "react";
-import { collection, deleteDoc, doc, onSnapshot, setDoc, writeBatch } from "firebase/firestore";
+import { collection, deleteDoc, doc, getDoc, onSnapshot, setDoc, writeBatch } from "firebase/firestore";
 import { CalendarDays, Copy, Plus, Trash2 } from "lucide-react";
 import { Calendar } from "@/components/ui/calendar";
 import { useConsultations } from "@/lib/admin-data";
-import { bookingSlotId, formatDate, formatTime } from "@/lib/consultations";
+import { bookingSlotId, formatDate, formatTime, normalizeConsultationStatus } from "@/lib/consultations";
 import { getFirebaseDb } from "@/lib/firebase";
 
 export const Route = createFileRoute("/admin/availability")({ component: AvailabilityPage });
@@ -86,7 +86,15 @@ function AvailabilityPage() {
     if (!consultations) return;
     // Backfill booked-slot markers for existing bookings; preserve records already present.
     for (const item of consultations) {
-      if (item.status === "Cancelled" || !item.preferredDate || !item.preferredTime) continue;
+      if (!item.preferredDate || !item.preferredTime) continue;
+      const slotRef = doc(getFirebaseDb(), "bookedSlots", bookingSlotId(item.preferredDate, item.preferredTime));
+      if (normalizeConsultationStatus(item.status, item.archived) === "Cancelled") {
+        void getDoc(slotRef).then((slot) => {
+          const owner = slot.data()?.consultationId;
+          if (slot.exists() && (!owner || owner === item.id || owner === item.consultationId)) return deleteDoc(slotRef);
+        }).catch((error) => console.error("Could not release a cancelled consultation slot:", error));
+        continue;
+      }
       void setDoc(doc(getFirebaseDb(), "bookedSlots", bookingSlotId(item.preferredDate, item.preferredTime)), {
         date: item.preferredDate,
         time: item.preferredTime,

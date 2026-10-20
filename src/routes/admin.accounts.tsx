@@ -2,7 +2,7 @@ import { createFileRoute } from "@tanstack/react-router";
 import { useMemo, useState } from "react";
 import { CartesianGrid, Line, LineChart, ResponsiveContainer, Tooltip, XAxis, YAxis } from "recharts";
 import { useConsultations } from "@/lib/admin-data";
-import { PAYMENT_STATUSES, formatDate, type PaymentStatus } from "@/lib/consultations";
+import { PAYMENT_STATUSES, formatDate, normalizeConsultationStatus, type PaymentStatus } from "@/lib/consultations";
 
 export const Route = createFileRoute("/admin/accounts")({
   head: () => ({
@@ -27,6 +27,7 @@ type PaymentRow = {
   paymentReference: string;
   paymentDate: string;
   createdAt?: { toDate: () => Date };
+  cancelled: boolean;
 };
 
 function currentMonth() {
@@ -100,6 +101,7 @@ function AccountsPage() {
     paymentReference: row.paymentReference ?? "",
     paymentDate: row.paymentDate ?? "",
     createdAt: row.createdAt,
+    cancelled: normalizeConsultationStatus(row.status, row.archived) === "Cancelled",
   } satisfies PaymentRow)), [rows]);
 
   const filteredRows = useMemo(() => payments.filter((row) => {
@@ -129,7 +131,7 @@ function AccountsPage() {
         recorded += 1;
       }
     }
-    const outstanding = filteredRows.filter((row) => row.paymentStatus !== "Paid").length;
+    const outstanding = filteredRows.filter((row) => !row.cancelled && row.paymentStatus !== "Paid").length;
     return {
       chart: months.map((month) => ({ month: monthLabel(month), amount: totals.get(month) ?? 0 })),
       received,
