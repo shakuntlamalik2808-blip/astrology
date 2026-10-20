@@ -49,10 +49,11 @@ function AvailabilityPage() {
   const [rangeStart, setRangeStart] = useState("10:00");
   const [rangeEnd, setRangeEnd] = useState("18:00");
   const [interval, setInterval] = useState(30);
+  const [dayOffMode, setDayOffMode] = useState(false);
   const [feedback, setFeedback] = useState("");
   const [loading, setLoading] = useState(false);
-  const [copySource, setCopySource] = useState<"open-slots" | "time-range">("open-slots");
-  const [targetMethod, setTargetMethod] = useState<"dates" | "range">("dates");
+  const [copySource, setCopySource] = useState<"open-slots" | "time-range">("time-range");
+  const [targetMethod, setTargetMethod] = useState<"dates" | "range">("range");
   const [targetDates, setTargetDates] = useState<Date[]>([]);
   const [fromDate, setFromDate] = useState(selectedDate);
   const [toDate, setToDate] = useState(selectedDate);
@@ -68,7 +69,15 @@ function AvailabilityPage() {
     setBookingsReady(true);
   }, (error) => { setFeedback(error.message); setBookingsReady(true); }), []);
 
-  const booked = useMemo(() => (consultations ?? []).filter((item) => item.status !== "Cancelled"), [consultations]);
+  useEffect(() => onSnapshot(doc(getFirebaseDb(), "settings", "availability"), (snapshot) => {
+    if (!snapshot.exists()) return;
+    const preset = snapshot.data();
+    if (typeof preset.openingTime === "string") setRangeStart(preset.openingTime);
+    if (typeof preset.closingTime === "string") setRangeEnd(preset.closingTime);
+    if ([15, 30, 60].includes(preset.slotInterval)) setInterval(preset.slotInterval);
+  }, (error) => setFeedback(error.message)), []);
+
+  const booked = useMemo(() => (consultations ?? []).filter((item) => normalizeConsultationStatus(item.status, item.archived) !== "Cancelled"), [consultations]);
   const bookedKeys = useMemo(() => new Set([
     ...booked.map((item) => bookingSlotId(item.preferredDate, item.preferredTime)),
     ...bookedMarkers.map((item) => item.id),
@@ -146,6 +155,21 @@ function AvailabilityPage() {
     finally { setLoading(false); }
   }
 
+  async function saveDailyPreset() {
+    if (!rangeTimes.length) { setFeedback("Closing time must be after opening time."); return; }
+    setLoading(true); setFeedback("");
+    try {
+      await setDoc(doc(getFirebaseDb(), "settings", "availability"), {
+        openingTime: rangeStart,
+        closingTime: rangeEnd,
+        slotInterval: interval,
+        updatedAt: new Date(),
+      }, { merge: true });
+      setFeedback("Standard daily hours saved.");
+    } catch (error) { setFeedback(error instanceof Error ? error.message : "Could not save standard hours."); }
+    finally { setLoading(false); }
+  }
+
   function targetDateKeys() {
     if (targetMethod === "dates") return [...new Set(targetDates.map(dateKey))].filter((date) => date !== selectedDate);
     const from = fromDateKey(fromDate); const to = fromDateKey(toDate);
@@ -208,28 +232,48 @@ function AvailabilityPage() {
     finally { setLoading(false); }
   }
 
+  async function closeDayOff(day: string) {
+    setSelectedDate(day);
+    if (!ready) { setFeedback("Wait for booking information to load before closing a day."); return; }
+    const closing = slots.filter((slot) => slot.date === day && slot.enabled && !bookedKeys.has(slot.id));
+    const preservedIds = new Set([
+      ...booked.filter((item) => item.preferredDate === day).map((item) => bookingSlotId(item.preferredDate, item.preferredTime)),
+      ...bookedMarkers.filter((item) => item.date === day).map((item) => item.id),
+    ]);
+    if (!closing.length) { setFeedback(`No open slots to close on ${formatDate(day)}. ${preservedIds.size} booked appointments preserved.`); return; }
+    setLoading(true); setFeedback("");
+    try {
+      await commitWrites(closing.map((slot) => (batch) => batch.delete(doc(getFirebaseDb(), "availableSlots", slot.id))));
+      setFeedback(`Day off set for ${formatDate(day)}. ${closing.length} unbooked slots closed; ${preservedIds.size} booked appointments preserved.`);
+    } catch (error) { setFeedback(error instanceof Error ? error.message : "Could not close this day."); }
+    finally { setLoading(false); }
+  }
+
   const toggleDay = (day: number) => setDays((current) => current.includes(day) ? current.filter((item) => item !== day) : [...current, day]);
   const controlClass = "mt-1 block h-10 rounded-sm border border-input bg-background px-3 text-sm [color-scheme:light]";
 
   return <div className="max-w-6xl space-y-6">
     <div><p className="eyebrow text-gold">Bookings</p><h1 className="display mt-2 text-3xl">Availability calendar</h1><p className="mt-2 text-sm text-muted-foreground">Choose a date to open appointment times. Booked times are shown here and hidden from the website form.</p></div>
-    <div className="grid gap-6 xl:grid-cols-[auto_minmax(0,1fr)]">
-      <section className="rounded-sm border border-border bg-card p-4 sm:p-6">
-        <Calendar mode="single" selected={fromDateKey(selectedDate)} onSelect={(date) => date && setSelectedDate(dateKey(date))} modifiers={{ scheduled: markedDays }} modifiersClassNames={{ scheduled: "after:absolute after:bottom-1 after:left-1/2 after:size-1 after:-translate-x-1/2 after:rounded-full after:bg-gold" }} />
+    <div className="grid min-w-0 gap-6 xl:grid-cols-[minmax(18rem,0.8fr)_minmax(0,1.2fr)]">
+      <section className="min-w-0 rounded-sm border border-border bg-card p-4 sm:p-6">
+        <div className="mb-3 flex flex-wrap items-center justify-between gap-2"><h2 className="font-display text-lg">Step 3 · Single-day toggle</h2><button type="button" aria-pressed={dayOffMode} onClick={() => setDayOffMode((value) => !value)} className={`min-h-10 rounded-sm border px-3 text-sm ${dayOffMode ? "border-destructive bg-destructive/10 text-destructive" : "border-border"}`}>{dayOffMode ? "Day Off Mode On" : "Set Day Off"}</button></div>
+        <p className="mb-2 text-xs text-muted-foreground">{dayOffMode ? "Select a calendar day to close all unbooked slots. Booked appointments stay reserved." : "Select a date to view or manage its slots. Turn on Set Day Off before choosing a date to close its unbooked slots."}</p>
+        <Calendar mode="single" selected={fromDateKey(selectedDate)} onSelect={(date) => { if (!date) return; const key = dateKey(date); setSelectedDate(key); if (dayOffMode) void closeDayOff(key); }} modifiers={{ scheduled: markedDays }} modifiersClassNames={{ scheduled: "after:absolute after:bottom-1 after:left-1/2 after:size-1 after:-translate-x-1/2 after:rounded-full after:bg-gold" }} />
         <div className="mt-3 flex items-center gap-2 text-xs text-muted-foreground"><span className="size-2 rounded-full bg-gold" />Dates with availability or bookings</div>
       </section>
-      <section className="space-y-5 rounded-sm border border-border bg-card p-4 sm:p-6">
+      <section className="min-w-0 space-y-5 rounded-sm border border-border bg-card p-4 sm:p-6">
         <div className="flex items-center gap-2"><CalendarDays className="size-4 text-gold" /><h2 className="font-display text-xl">{formatDate(selectedDate)}</h2></div>
         <div className="flex flex-col gap-3 sm:flex-row sm:items-end">
           <label className="text-sm">Open a time<input type="time" value={time} onChange={(event) => setTime(event.target.value)} className={controlClass} /></label>
           <button type="button" onClick={() => void addSlot()} disabled={loading || !ready} className="inline-flex h-10 items-center justify-center gap-2 rounded-sm bg-primary px-4 text-sm text-primary-foreground disabled:opacity-50"><Plus className="size-4" />Make available</button>
         </div>
         <section className="rounded-sm border border-border p-4">
-          <h3 className="font-display text-lg">Select Time Range</h3><p className="mt-1 text-xs text-muted-foreground">The end time marks the first time that is excluded from the range.</p>
+          <h3 className="font-display text-lg">Step 1 · Preset Daily Hours</h3><p className="mt-1 text-xs text-muted-foreground">Set standard opening and closing times and the slot interval. The closing time is excluded.</p>
           <div className="mt-4 flex flex-wrap items-end gap-3">
             <label className="text-sm">Start time<input type="time" value={rangeStart} onChange={(event) => setRangeStart(event.target.value)} className={controlClass} /></label>
             <label className="text-sm">End time<input type="time" value={rangeEnd} onChange={(event) => setRangeEnd(event.target.value)} className={controlClass} /></label>
             <label className="text-sm">Slot interval<select value={interval} onChange={(event) => setInterval(Number(event.target.value))} className={controlClass}><option value={15}>15 minutes</option><option value={30}>30 minutes</option><option value={60}>60 minutes</option></select></label>
+            <button type="button" disabled={loading || !rangeTimes.length} onClick={() => void saveDailyPreset()} className="h-10 rounded-sm border border-border px-4 text-sm disabled:opacity-50">Save Standard Hours</button>
             <button type="button" disabled={loading || !ready || !rangeTimes.length} onClick={() => void applySingleDayRange("open")} className="h-10 rounded-sm bg-primary px-4 text-sm text-primary-foreground disabled:opacity-50">Open Range</button>
             <button type="button" disabled={loading || !ready || !rangeTimes.length} onClick={() => void applySingleDayRange("close")} className="h-10 rounded-sm border border-border px-4 text-sm disabled:opacity-50">Close Range</button>
           </div>
@@ -237,7 +281,7 @@ function AvailabilityPage() {
         </section>
 
         <section className="rounded-sm border border-border p-4">
-          <div className="flex items-center gap-2"><Copy className="size-4 text-gold" /><h3 className="font-display text-lg">Copy / Bulk Apply Schedule</h3></div>
+          <div className="flex items-center gap-2"><Copy className="size-4 text-gold" /><h3 className="font-display text-lg">Step 2 · Bulk Date-Range Opening</h3></div>
           <div className="mt-4 grid gap-4 sm:grid-cols-2">
             <label className="text-sm">Copy from<select value={copySource} onChange={(event) => setCopySource(event.target.value as typeof copySource)} className={`${controlClass} w-full`}><option value="open-slots">Current day’s open slots</option><option value="time-range">Selected time range</option></select></label>
             <label className="text-sm">When applying<select value={applyMode} onChange={(event) => setApplyMode(event.target.value as ApplyMode)} className={`${controlClass} w-full`}><option value="merge">Merge with existing open slots</option><option value="replace">Replace unbooked slots for target days</option></select></label>
